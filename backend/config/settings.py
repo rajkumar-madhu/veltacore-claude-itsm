@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -19,13 +20,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-5!51*piu(m++x4f@+*ms=siibzax*mr9hc5osr&6p(svl=raih"
+# SECURITY WARNING: keep the secret key used in production secret! The
+# fallback below is fine for local dev but must never be relied on in a real
+# deployment — set DJANGO_SECRET_KEY there.
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-5!51*piu(m++x4f@+*ms=siibzax*mr9hc5osr&6p(svl=raih",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DJANGO_DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [h for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",") if h]
 
 
 # Application definition
@@ -53,7 +59,11 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
+# Wide open in dev for convenience; a real deployment must set
+# DJANGO_CORS_ALLOWED_ORIGINS instead of inheriting allow-all.
+CORS_ALLOW_ALL_ORIGINS = DEBUG
+if not DEBUG:
+    CORS_ALLOWED_ORIGINS = [o for o in os.environ.get("DJANGO_CORS_ALLOWED_ORIGINS", "").split(",") if o]
 
 ROOT_URLCONF = "config.urls"
 
@@ -126,3 +136,13 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+REST_FRAMEWORK = {
+    # All four resources are small fixed catalogs — no viewset needs to
+    # repeat "pagination_class = None" individually.
+    "DEFAULT_PAGINATION_CLASS": None,
+    # Every endpoint here is public, read-only monitoring data and there is
+    # no auth system yet — AllowAny is the intended behavior, made explicit
+    # rather than left as DRF's implicit default.
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
+}

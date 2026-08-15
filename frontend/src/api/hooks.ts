@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
+import { SEED_MONITORS, SEED_SITES, SEED_SLOS, SEED_SYNTHETICS } from "@/lib/seed";
 
-const quiet = { retry: 0, refetchOnWindowFocus: false } as const;
+const quiet = { retry: 0, refetchOnWindowFocus: false, refetchInterval: 30_000 } as const;
 
 async function apiGet<T>(path: string): Promise<T> {
   const res = await fetch(`/api${path}`);
@@ -8,12 +9,20 @@ async function apiGet<T>(path: string): Promise<T> {
   return res.json();
 }
 
+// Every list endpoint here is a small fixed catalog with a matching local
+// seed constant, so the API-down/loading/empty-DB fallback lives once, here,
+// rather than being re-decided (and re-diverging) in every consumer.
+function withSeedFallback<T>(data: T[] | undefined, seed: T[]): T[] {
+  return data && data.length > 0 ? data : seed;
+}
+
 export interface SiteRow {
   id: string; name: string; region: string; devices: number; health: number;
   lat: number | null; lng: number | null;
 }
 export function useSites() {
-  return useQuery({ ...quiet, queryKey: ["sites"], queryFn: () => apiGet<SiteRow[]>("/sites/") });
+  const query = useQuery({ ...quiet, queryKey: ["sites"], queryFn: () => apiGet<SiteRow[]>("/sites/") });
+  return { ...query, data: withSeedFallback(query.data, SEED_SITES) };
 }
 
 export interface SloRow {
@@ -21,7 +30,8 @@ export interface SloRow {
   target: number; actual: number; window: string; burnRate: number;
 }
 export function useSlos() {
-  return useQuery({ ...quiet, queryKey: ["slos"], queryFn: () => apiGet<SloRow[]>("/slos/") });
+  const query = useQuery({ ...quiet, queryKey: ["slos"], queryFn: () => apiGet<SloRow[]>("/slos/") });
+  return { ...query, data: withSeedFallback(query.data, SEED_SLOS) };
 }
 
 export interface MonitorRow {
@@ -29,7 +39,8 @@ export interface MonitorRow {
   warn: number; crit: number; window: string; scope: string; since: string;
 }
 export function useMonitors() {
-  return useQuery({ ...quiet, queryKey: ["monitors"], queryFn: () => apiGet<MonitorRow[]>("/monitors/") });
+  const query = useQuery({ ...quiet, queryKey: ["monitors"], queryFn: () => apiGet<MonitorRow[]>("/monitors/") });
+  return { ...query, data: withSeedFallback(query.data, SEED_MONITORS) };
 }
 
 export interface SyntheticRow {
@@ -37,5 +48,6 @@ export interface SyntheticRow {
   p95: number; status: string; interval: string; locations: number; lastRun: string;
 }
 export function useSynthetics() {
-  return useQuery({ ...quiet, queryKey: ["synthetics"], queryFn: () => apiGet<SyntheticRow[]>("/synthetics/") });
+  const query = useQuery({ ...quiet, queryKey: ["synthetics"], queryFn: () => apiGet<SyntheticRow[]>("/synthetics/") });
+  return { ...query, data: withSeedFallback(query.data, SEED_SYNTHETICS) };
 }

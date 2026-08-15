@@ -19,34 +19,34 @@ class Command(BaseCommand):
         # SLOs — all within target (no breaching objectives).
         Slo.objects.all().delete()
         Slo.objects.bulk_create([
-            Slo(id="SLO-01", name="Order API availability", service="oms-gateway", type="Availability", target=99.9, actual=99.94, window="30d", burn_rate=0.6, position=0),
-            Slo(id="SLO-02", name="Order round-trip latency p99 < 250µs", service="oms-core", type="Latency", target=99.0, actual=99.15, window="30d", burn_rate=0.5, position=1),
-            Slo(id="SLO-03", name="Market-data freshness < 50ms", service="feed-handler", type="Freshness", target=99.5, actual=99.71, window="30d", burn_rate=0.4, position=2),
-            Slo(id="SLO-04", name="Checkout error rate < 1%", service="payments", type="Error rate", target=99.0, actual=99.25, window="30d", burn_rate=0.3, position=3),
-            Slo(id="SLO-05", name="Login flow availability", service="auth", type="Availability", target=99.95, actual=99.97, window="30d", burn_rate=0.3, position=4),
+            Slo(id="SLO-01", name="Order API availability", service="oms-gateway", type="Availability", target=99.9, actual=99.94, window="30d", burn_rate=0.6),
+            Slo(id="SLO-02", name="Order round-trip latency p99 < 250µs", service="oms-core", type="Latency", target=99.0, actual=99.15, window="30d", burn_rate=0.5),
+            Slo(id="SLO-03", name="Market-data freshness < 50ms", service="feed-handler", type="Freshness", target=99.5, actual=99.71, window="30d", burn_rate=0.4),
+            Slo(id="SLO-04", name="Checkout error rate < 1%", service="payments", type="Error rate", target=99.0, actual=99.25, window="30d", burn_rate=0.3),
+            Slo(id="SLO-05", name="Login flow availability", service="auth", type="Availability", target=99.95, actual=99.97, window="30d", burn_rate=0.3),
         ])
 
         # Monitors — none alerting; two in a routine warning state.
         Monitor.objects.all().delete()
         Monitor.objects.bulk_create([
-            Monitor(id="MON-01", name="Order round-trip p99 > 250µs", type="Metric", query="p99:oms.order.latency{tenant:fyers}", state="ok", warn=200, crit=250, window="5m", scope="oms-core", since="—", position=0),
-            Monitor(id="MON-02", name="NSE queue depth > 700", type="Metric", query="max:mq.queue.depth{adapter:nse}", state="warn", warn=500, crit=700, window="2m", scope="feed-handler", since="4m", position=1),
-            Monitor(id="MON-03", name="Checkout error rate anomaly", type="Anomaly", query="anomalies(sum:payments.errors{*}, 'basic', 2)", state="ok", warn=1, crit=2, window="10m", scope="payments", since="—", position=2),
-            Monitor(id="MON-04", name="Feed freshness > 50ms", type="Metric", query="avg:feed.nse.gap{*}", state="ok", warn=40, crit=50, window="1m", scope="feed-handler", since="—", position=3),
-            Monitor(id="MON-05", name="iLO exporter down", type="Synthetic", query="up{job='ilo-exporter'} == 0", state="warn", warn=1, crit=1, window="1m", scope="hardware", since="1h", position=4),
-            Monitor(id="MON-06", name="OMS latency AND queue high", type="Composite", query="MON-01 && MON-02", state="ok", warn=1, crit=1, window="5m", scope="trading", since="—", position=5),
-            Monitor(id="MON-07", name="Timeout log surge > 100/min", type="Log", query="logs('service:oms status:error \"timeout\"').index('*').rollup('count')", state="ok", warn=60, crit=100, window="5m", scope="oms-gateway", since="—", position=6),
+            Monitor(id="MON-01", name="Order round-trip p99 > 250µs", type="Metric", query="p99:oms.order.latency{tenant:fyers}", state="ok", warn=200, crit=250, window="5m", scope="oms-core", since="—"),
+            Monitor(id="MON-02", name="NSE queue depth > 700", type="Metric", query="max:mq.queue.depth{adapter:nse}", state="warn", warn=500, crit=700, window="2m", scope="feed-handler", since="4m"),
+            Monitor(id="MON-03", name="Checkout error rate anomaly", type="Anomaly", query="anomalies(sum:payments.errors{*}, 'basic', 2)", state="ok", warn=1, crit=2, window="10m", scope="payments", since="—"),
+            Monitor(id="MON-04", name="Feed freshness > 50ms", type="Metric", query="avg:feed.nse.gap{*}", state="ok", warn=40, crit=50, window="1m", scope="feed-handler", since="—"),
+            Monitor(id="MON-05", name="iLO exporter down", type="Synthetic", query="up{job='ilo-exporter'} == 0", state="warn", warn=1, crit=1, window="1m", scope="hardware", since="1h"),
+            Monitor(id="MON-06", name="OMS latency AND queue high", type="Composite", query="MON-01 && MON-02", state="ok", warn=1, crit=1, window="5m", scope="trading", since="—"),
+            Monitor(id="MON-07", name="Timeout log surge > 100/min", type="Log", query="logs('service:oms status:error \"timeout\"').index('*').rollup('count')", state="ok", warn=60, crit=100, window="5m", scope="oms-gateway", since="—"),
         ])
 
         # Synthetic checks — all up.
         SyntheticCheck.objects.all().delete()
         SyntheticCheck.objects.bulk_create([
-            SyntheticCheck(id="SYN-01", name="Fyers login flow", type="Browser", target="https://fs-le-uat.finspot.in/login", uptime=99.98, p95=842, status="up", interval="1m", locations=5, last_run="12s ago", position=0),
-            SyntheticCheck(id="SYN-02", name="Order API /v2/orders", type="HTTP", target="https://api.fyers.in/v2/orders", uptime=99.91, p95=214, status="up", interval="30s", locations=5, last_run="8s ago", position=1),
-            SyntheticCheck(id="SYN-03", name="Market-data websocket", type="TCP", target="wss://feed.fyers.in:443", uptime=99.95, p95=22, status="up", interval="30s", locations=4, last_run="5s ago", position=2),
-            SyntheticCheck(id="SYN-04", name="NSE gateway reachability", type="ICMP", target="10.20.4.11", uptime=100, p95=2, status="up", interval="1m", locations=3, last_run="20s ago", position=3),
-            SyntheticCheck(id="SYN-05", name="Status page availability", type="HTTP", target="https://status.finspot.in", uptime=100, p95=96, status="up", interval="1m", locations=5, last_run="18s ago", position=4),
-            SyntheticCheck(id="SYN-06", name="Payments gateway checkout", type="HTTP", target="https://pay.finspot.in/checkout", uptime=99.92, p95=165, status="up", interval="1m", locations=5, last_run="3s ago", position=5),
+            SyntheticCheck(id="SYN-01", name="Fyers login flow", type="Browser", target="https://fs-le-uat.finspot.in/login", uptime=99.98, p95=842, status="up", interval="1m", locations=5, last_run="12s ago"),
+            SyntheticCheck(id="SYN-02", name="Order API /v2/orders", type="HTTP", target="https://api.fyers.in/v2/orders", uptime=99.91, p95=214, status="up", interval="30s", locations=5, last_run="8s ago"),
+            SyntheticCheck(id="SYN-03", name="Market-data websocket", type="TCP", target="wss://feed.fyers.in:443", uptime=99.95, p95=22, status="up", interval="30s", locations=4, last_run="5s ago"),
+            SyntheticCheck(id="SYN-04", name="NSE gateway reachability", type="ICMP", target="10.20.4.11", uptime=100, p95=2, status="up", interval="1m", locations=3, last_run="20s ago"),
+            SyntheticCheck(id="SYN-05", name="Status page availability", type="HTTP", target="https://status.finspot.in", uptime=100, p95=96, status="up", interval="1m", locations=5, last_run="18s ago"),
+            SyntheticCheck(id="SYN-06", name="Payments gateway checkout", type="HTTP", target="https://pay.finspot.in/checkout", uptime=99.92, p95=165, status="up", interval="1m", locations=5, last_run="3s ago"),
         ])
 
         self.stdout.write(self.style.SUCCESS(

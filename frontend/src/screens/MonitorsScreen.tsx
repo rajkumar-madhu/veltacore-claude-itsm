@@ -1,18 +1,10 @@
-import React from "react";
 import { useMonitors } from "@/api/hooks";
-import { SEED_MONITORS } from "@/lib/seed";
-
-const STATE_PILL: Record<string, { cls: string; label: string; icon: string }> = {
-  ok: { cls: "ok", label: "OK", icon: "fa-circle-check" },
-  warn: { cls: "warn", label: "Warn", icon: "fa-triangle-exclamation" },
-  alert: { cls: "crit", label: "Alert", icon: "fa-fire" },
-  nodata: { cls: "muted", label: "No Data", icon: "fa-circle-question" },
-};
+import { MONITOR_STATE_PILL } from "@/lib/status";
+import { useSelectedRow } from "@/lib/useSelectedRow";
 
 export default function MonitorsScreen() {
-  const MONITORS = useMonitors().data ?? SEED_MONITORS;
-  const [selId, setSelId] = React.useState("MON-01");
-  const sel = MONITORS.find((m) => m.id === selId) ?? MONITORS[0];
+  const MONITORS = useMonitors().data;
+  const [sel, setSelId] = useSelectedRow(MONITORS);
 
   const alerting = MONITORS.filter((m) => m.state === "alert").length;
   const warning = MONITORS.filter((m) => m.state === "warn").length;
@@ -34,7 +26,7 @@ export default function MonitorsScreen() {
             <thead><tr><th>Monitor</th><th>Type</th><th>State</th><th>Every</th><th>Since</th></tr></thead>
             <tbody>
               {MONITORS.map((m) => {
-                const p = STATE_PILL[m.state] ?? STATE_PILL.ok;
+                const p = MONITOR_STATE_PILL[m.state] ?? MONITOR_STATE_PILL.ok;
                 return (
                   <tr key={m.id} className="row-clickable" onClick={() => setSelId(m.id)} style={{ background: sel?.id === m.id ? "#eff6ff" : undefined }}>
                     <td>

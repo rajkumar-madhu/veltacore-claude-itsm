@@ -1,17 +1,17 @@
-import React from "react";
 import { useSlos } from "@/api/hooks";
-import { SEED_SLOS } from "@/lib/seed";
+import { TONE_COLOR } from "@/lib/status";
+import { useSelectedRow } from "@/lib/useSelectedRow";
 
 function budgetRemainingPct(target: number, actual: number) {
   const allowed = 100 - target;
+  if (allowed <= 0) return actual >= target ? 100 : 0;
   const remaining = Math.min(1, Math.max(0, (actual - target) / allowed + 1));
   return Math.round(remaining * 100);
 }
 
 export default function SlosScreen() {
-  const SLOS = useSlos().data ?? SEED_SLOS;
-  const [selId, setSelId] = React.useState("SLO-01");
-  const sel = SLOS.find((s) => s.id === selId) ?? SLOS[0];
+  const SLOS = useSlos().data;
+  const [sel, setSelId] = useSelectedRow(SLOS);
 
   const healthy = SLOS.filter((s) => s.actual >= s.target).length;
   const breaching = SLOS.length - healthy;
@@ -46,7 +46,7 @@ export default function SlosScreen() {
                     </td>
                     <td><span className="pill muted">{s.type}</span></td>
                     <td>{s.target}%</td>
-                    <td style={{ fontWeight: 700, color: ok ? "#059669" : "#dc2626" }}>{s.actual}%</td>
+                    <td style={{ fontWeight: 700, color: ok ? TONE_COLOR.ok : TONE_COLOR.crit }}>{s.actual}%</td>
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                         <div style={{ flex: 1, height: 8, background: "#f1f5f9", borderRadius: 4, overflow: "hidden" }}>
@@ -69,11 +69,11 @@ export default function SlosScreen() {
               <div style={{ fontSize: 11, color: "#8a94a3", marginBottom: 14 }}>{sel.service} · {sel.window} window</div>
               <div style={{ display: "flex", gap: 10 }}>
                 <div style={{ flex: 1, textAlign: "center", padding: "10px 6px", background: "#f8fafc", borderRadius: 6 }}>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: sel.actual >= sel.target ? "#059669" : "#dc2626" }}>{sel.actual}%</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: sel.actual >= sel.target ? TONE_COLOR.ok : TONE_COLOR.crit }}>{sel.actual}%</div>
                   <div style={{ fontSize: 10.5, color: "#8a94a3" }}>SLI vs {sel.target}% target</div>
                 </div>
                 <div style={{ flex: 1, textAlign: "center", padding: "10px 6px", background: "#f8fafc", borderRadius: 6 }}>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: b > 0 ? "#059669" : "#dc2626" }}>{b}%</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: b > 0 ? TONE_COLOR.ok : TONE_COLOR.crit }}>{b}%</div>
                   <div style={{ fontSize: 10.5, color: "#8a94a3" }}>budget remaining</div>
                 </div>
               </div>

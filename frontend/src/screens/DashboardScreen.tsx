@@ -1,15 +1,15 @@
 import { useNavigate } from "react-router-dom";
 import { useSlos, useMonitors, useSynthetics, useSites } from "@/api/hooks";
-import { SEED_SLOS, SEED_MONITORS, SEED_SYNTHETICS, SEED_SITES } from "@/lib/seed";
+import { healthTone, TONE_COLOR } from "@/lib/status";
 import { WorldMap } from "@/components/WorldMap";
 
 export default function DashboardScreen() {
   const navigate = useNavigate();
 
-  const slos = useSlos().data ?? SEED_SLOS;
-  const monitors = useMonitors().data ?? SEED_MONITORS;
-  const synthetics = useSynthetics().data ?? SEED_SYNTHETICS;
-  const sites = useSites().data ?? SEED_SITES;
+  const slos = useSlos().data;
+  const monitors = useMonitors().data;
+  const synthetics = useSynthetics().data;
+  const sites = useSites().data;
 
   const slosBreaching = slos.filter((s) => s.actual < s.target).length;
   const monitorsAlerting = monitors.filter((m) => m.state === "alert").length;
@@ -66,7 +66,7 @@ export default function DashboardScreen() {
             <div style={{ padding: "4px 0" }}>
               {sites.map((s) => (
                 <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 16px" }}>
-                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: s.health >= 95 ? "#059669" : s.health >= 80 ? "#f2a01e" : "#dc2626", flexShrink: 0 }} />
+                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: TONE_COLOR[healthTone(s.health)], flexShrink: 0 }} />
                   <span style={{ flex: 1, fontSize: 12.5 }}>{s.name}</span>
                   <span style={{ fontSize: 11.5, color: "#8a94a3" }}>{s.health}%</span>
                 </div>

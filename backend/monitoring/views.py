@@ -7,22 +7,18 @@ from .serializers import MonitorSerializer, SiteSerializer, SloSerializer, Synth
 class SiteViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Site.objects.all()
     serializer_class = SiteSerializer
-    pagination_class = None
 
 
 class SloViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Slo.objects.all()
     serializer_class = SloSerializer
-    pagination_class = None
 
 
 class MonitorViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Monitor.objects.all()
     serializer_class = MonitorSerializer
-    pagination_class = None
 
 
 class SyntheticCheckViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = SyntheticCheck.objects.all()
     serializer_class = SyntheticCheckSerializer
-    pagination_class = None

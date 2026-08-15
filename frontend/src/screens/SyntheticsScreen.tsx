@@ -1,17 +1,10 @@
-import React from "react";
 import { useSynthetics } from "@/api/hooks";
-import { SEED_SYNTHETICS } from "@/lib/seed";
-
-const STATUS_PILL: Record<string, { cls: string; label: string; icon: string }> = {
-  up: { cls: "ok", label: "Up", icon: "fa-circle-check" },
-  degraded: { cls: "warn", label: "Degraded", icon: "fa-triangle-exclamation" },
-  down: { cls: "crit", label: "Down", icon: "fa-circle-xmark" },
-};
+import { SYNTHETIC_STATUS_PILL, TONE_COLOR } from "@/lib/status";
+import { useSelectedRow } from "@/lib/useSelectedRow";
 
 export default function SyntheticsScreen() {
-  const CHECKS = useSynthetics().data ?? SEED_SYNTHETICS;
-  const [selId, setSelId] = React.useState("SYN-01");
-  const sel = CHECKS.find((c) => c.id === selId) ?? CHECKS[0];
+  const CHECKS = useSynthetics().data;
+  const [sel, setSelId] = useSelectedRow(CHECKS);
 
   const upCount = CHECKS.filter((c) => c.status === "up").length;
   const fleetUptime = CHECKS.length ? (CHECKS.reduce((s, c) => s + c.uptime, 0) / CHECKS.length).toFixed(2) : "0";
@@ -33,7 +26,7 @@ export default function SyntheticsScreen() {
             <thead><tr><th>Check</th><th>Type</th><th>Uptime</th><th>P95</th><th>Status</th></tr></thead>
             <tbody>
               {CHECKS.map((c) => {
-                const p = STATUS_PILL[c.status] ?? STATUS_PILL.up;
+                const p = SYNTHETIC_STATUS_PILL[c.status] ?? SYNTHETIC_STATUS_PILL.up;
                 return (
                   <tr key={c.id} className="row-clickable" onClick={() => setSelId(c.id)} style={{ background: sel?.id === c.id ? "#eff6ff" : undefined }}>
                     <td>
@@ -41,7 +34,7 @@ export default function SyntheticsScreen() {
                       <div style={{ fontSize: 11, color: "#8a94a3" }}>{c.target}</div>
                     </td>
                     <td><span className="pill muted">{c.type}</span></td>
-                    <td style={{ fontWeight: 700, color: c.uptime >= 99.9 ? "#059669" : c.uptime >= 99 ? "#b45309" : "#dc2626" }}>{c.uptime.toFixed(2)}%</td>
+                    <td style={{ fontWeight: 700, color: c.uptime >= 99.9 ? TONE_COLOR.ok : c.uptime >= 99 ? TONE_COLOR.warn : TONE_COLOR.crit }}>{c.uptime.toFixed(2)}%</td>
                     <td>{c.p95}ms</td>
                     <td><span className={`pill ${p.cls}`}><i className={`fa-solid ${p.icon}`} /> {p.label}</span></td>
                   </tr>
