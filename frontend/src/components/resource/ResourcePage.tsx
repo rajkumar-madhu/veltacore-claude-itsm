@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useItsmList, useItsmMutation, type ApiError } from "@/api/itsm";
 import { ApiDown, Breadcrumbs } from "@/components/ui";
 import { useToast } from "@/lib/useToast";
@@ -78,7 +78,8 @@ export default function ResourcePage<T extends Row>({ cfg }: { cfg: ResourceConf
   const navigate = useNavigate();
   const { data, isLoading, isError, refetch } = useItsmList<T>(cfg.path, cfg.params, { refetchInterval: cfg.refetchInterval });
   const [toastNode, setToast] = useToast();
-  const [q, setQ] = React.useState("");
+  const [urlParams] = useSearchParams();
+  const [q, setQ] = React.useState(() => urlParams.get("q") ?? "");
   const [filters, setFilters] = React.useState<Record<string, string>>({});
   const [page, setPage] = React.useState(0);
   const [sort, setSort] = React.useState<{ key: string; dir: 1 | -1 } | null>(null);

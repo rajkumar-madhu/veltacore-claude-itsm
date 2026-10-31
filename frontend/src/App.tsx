@@ -20,6 +20,14 @@ const LAZY: [string, React.LazyExoticComponent<React.ComponentType>][] = [
   ["/tickets", l(() => import("@/screens/servicedesk/TicketsScreen"))],
   ["/tickets/:id", l(() => import("@/screens/servicedesk/TicketDetailScreen"))],
   ["/catalog", l(() => import("@/screens/servicedesk/CatalogScreen"))],
+  ["/cmdb/topology", l(() => import("@/screens/cmdb/TopologyScreen"))],
+  ["/cmdb/cis", l(() => import("@/screens/cmdb/CisScreen"))],
+  ["/cmdb/cis/:id", l(() => import("@/screens/cmdb/CiDetailScreen"))],
+  ["/cmdb/relationships", l(() => import("@/screens/cmdb/RelationshipsScreen"))],
+  ["/assets", l(() => import("@/screens/assets/AssetsScreen"))],
+  ["/assets/software", l(() => import("@/screens/assets/SoftwareScreen"))],
+  ["/assets/licenses", l(() => import("@/screens/assets/LicensesScreen"))],
+  ["/assets/lifecycle", l(() => import("@/screens/assets/LifecycleScreen"))],
 ];
 
 export default function App() {
