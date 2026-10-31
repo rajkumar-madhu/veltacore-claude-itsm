@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from monitoring.models import Site
 
-from . import workflow
+from . import settings_store, workflow
 from .models import (
     Alert, Asset, AuditLog, AutomationRule, BodEodCheck, BodEodRun, CatalogItem, CiRelationship, ConfigurationItem, Integration,
     KubeCluster, License, MonitoringTemplate, NotificationChannel, NotificationRule, RcaReport, Runbook, RunbookExecution,
@@ -137,6 +137,11 @@ class UptimeCheckSerializer(serializers.ModelSerializer):
 
     def get_uptime_pct(self, c):
         return uptime_pct(c)
+
+    def create(self, validated_data):
+        if "interval_sec" not in self.initial_data and "intervalSec" not in self.initial_data:
+            validated_data["interval_sec"] = min(3600, max(30, settings_store.get_int("uptime.default_interval", 60)))
+        return super().create(validated_data)
 
     def validate(self, data):
         kind = data.get("kind", getattr(self.instance, "kind", None))
@@ -314,6 +319,11 @@ class NotificationRuleSerializer(serializers.ModelSerializer):
 
 
 class SystemSettingSerializer(serializers.ModelSerializer):
+    applied = serializers.SerializerMethodField()
+
+    def get_applied(self, s):
+        return s.key in settings_store.APPLIED
+
     class Meta:
         model = SystemSetting
         fields = "__all__"

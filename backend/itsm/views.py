@@ -25,7 +25,7 @@ from monitoring.models import (
 )
 from monitoring.views import DebugOrAuthenticated
 
-from . import audit, automation, bod, cmdb_sync, uptime, workflow
+from . import audit, automation, bod, cmdb_sync, settings_store, uptime, workflow
 from .checks import CheckError, http_check
 from .models import (
     Alert, Asset, AuditLog, AutomationRule, BodEodCheck, BodEodRun, CatalogItem, CiRelationship, ConfigurationItem, Integration,
@@ -327,6 +327,25 @@ class LicenseViewSet(Base):
 
 # ---------------- Monitoring ----------------
 
+def _incident_from_alert(request, a, actor):
+    prio = {"critical": "P1", "warning": "P3", "info": "P4"}[a.severity]
+    ci = ConfigurationItem.objects.filter(name__iexact=a.target).first()
+    t = workflow.create(ticket_type="incident", actor=actor, title=a.title, priority=prio, ci=ci,
+                        category="Monitoring", assignment_group="NOC", requester="Argus Alerting",
+                        description=f"Raised from alert #{a.id} ({a.source}) on {a.target}. Rule: {a.rule or '—'}")
+    a.ticket = t
+    a.save(update_fields=["ticket"])
+    audit.record(request, "create", "ticket", t.number, f"{t.number} raised from alert {a.title}")
+    return t
+
+
+def _auto_incident_wanted(alert):
+    """alerts.auto_incident_severity: 'critical' → critical only, 'warning' → warning and critical, 'off' → never."""
+    level = settings_store.get("alerts.auto_incident_severity", "off")
+    wanted = {"critical": {"critical"}, "warning": {"critical", "warning"}}.get(level, set())
+    return alert.status == "firing" and not alert.ticket_id and alert.severity in wanted
+
+
 class AlertViewSet(Base):
     queryset = Alert.objects.select_related("ticket")
     serializer_class = AlertSerializer
@@ -354,6 +373,8 @@ class AlertViewSet(Base):
             alert, created = Alert.objects.create(started_at=now, **d), True
         executions = automation.trigger_for_alert(alert) if alert.status == "firing" else []
         audit.record(request, "create" if created else "refire", "alert", alert.pk, alert.title)
+        if _auto_incident_wanted(alert):
+            _incident_from_alert(request, alert, "system (auto-incident)")
         out = AlertSerializer(alert).data
         out["automation"] = [{"runbook": e.runbook.name, "status": e.status, "executionId": e.id} for e in executions]
         return Response(out, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
@@ -397,14 +418,7 @@ class AlertViewSet(Base):
         a = self.get_object()
         if a.ticket_id:
             return _err(f"Already linked to {a.ticket.number}.")
-        prio = {"critical": "P1", "warning": "P3", "info": "P4"}[a.severity]
-        ci = ConfigurationItem.objects.filter(name__iexact=a.target).first()
-        t = workflow.create(ticket_type="incident", actor=audit.actor_of(request), title=a.title, priority=prio, ci=ci,
-                            category="Monitoring", assignment_group="NOC", requester="Argus Alerting",
-                            description=f"Raised from alert #{a.id} ({a.source}) on {a.target}. Rule: {a.rule or '—'}")
-        a.ticket = t
-        a.save(update_fields=["ticket"])
-        audit.record(request, "create", "ticket", t.number, f"{t.number} raised from alert {a.title}")
+        t = _incident_from_alert(request, a, audit.actor_of(request))
         return Response(TicketSerializer(t).data, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=["get"])

@@ -672,3 +672,4 @@ a.btn { text-decoration: none; }
 .chart-tip > div { display: flex; align-items: center; gap: 6px; margin-top: 3px; color: #475569; }
 .chart-tip > div span { margin-left: auto; font-weight: 700; color: var(--ink); }
 .chart-tip i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+.switch-line { display: inline-flex; gap: 8px; align-items: center; font-size: 13px; cursor: pointer; }

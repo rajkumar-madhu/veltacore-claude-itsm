@@ -45,6 +45,12 @@ const LAZY: [string, React.LazyExoticComponent<React.ComponentType>][] = [
   ["/reports/rca", l(() => import("@/screens/analytics/RcaListScreen"))],
   ["/reports/rca/:id", l(() => import("@/screens/analytics/RcaDetailScreen"))],
   ["/audit", l(() => import("@/screens/analytics/AuditScreen"))],
+  ["/admin/users", l(() => import("@/screens/admin/UsersScreen"))],
+  ["/admin/sites", l(() => import("@/screens/admin/SitesScreen"))],
+  ["/admin/integrations", l(() => import("@/screens/admin/IntegrationsScreen"))],
+  ["/admin/notifications", l(() => import("@/screens/admin/NotificationsScreen"))],
+  ["/admin/thresholds", l(() => import("@/screens/admin/ThresholdsScreen"))],
+  ["/admin/settings", l(() => import("@/screens/admin/SettingsScreen"))],
 ];
 
 export default function App() {
