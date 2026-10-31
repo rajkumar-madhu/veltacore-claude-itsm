@@ -4,6 +4,8 @@ import DashboardScreen from "@/screens/DashboardScreen";
 import SlosScreen from "@/screens/SlosScreen";
 import MonitorsScreen from "@/screens/MonitorsScreen";
 import SyntheticsScreen from "@/screens/SyntheticsScreen";
+import VmListScreen from "@/screens/VmListScreen";
+import VmDetailScreen from "@/screens/vm/VmDetailScreen";
 
 const NAV = [
   { group: "Operate", items: [{ to: "/", label: "Dashboard", icon: "fa-gauge-high" }] },
@@ -15,6 +17,7 @@ const NAV = [
       { to: "/synthetics", label: "Synthetics", icon: "fa-globe" },
     ],
   },
+  { group: "Infrastructure", items: [{ to: "/vms", label: "Virtual Machines", icon: "fa-cube" }] },
 ];
 
 function Sidebar() {
@@ -32,7 +35,7 @@ function Sidebar() {
         <React.Fragment key={g.group}>
           <div className="nav-group-label">{g.group}</div>
           {g.items.map((item) => (
-            <Link key={item.to} to={item.to} className={`nav-link${pathname === item.to ? " active" : ""}`}>
+            <Link key={item.to} to={item.to} className={`nav-link${(item.to === "/" ? pathname === "/" : pathname.startsWith(item.to)) ? " active" : ""}`}>
               <i className={`fa-solid ${item.icon}`} />
               {item.label}
             </Link>
@@ -63,6 +66,8 @@ export default function App() {
           <Route path="/slos" element={<SlosScreen />} />
           <Route path="/monitors" element={<MonitorsScreen />} />
           <Route path="/synthetics" element={<SyntheticsScreen />} />
+          <Route path="/vms" element={<VmListScreen />} />
+          <Route path="/vms/:id" element={<VmDetailScreen />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

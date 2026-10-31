@@ -1,3 +1,5 @@
+import type { VmState } from "@/api/hooks";
+
 // Single registry for the app's status vocabularies, so a threshold or
 // label never has to be edited in more than one place.
 
@@ -30,4 +32,10 @@ export const SYNTHETIC_STATUS_PILL: Record<string, PillMeta> = {
   up: { cls: "ok", label: "Up", icon: "fa-circle-check" },
   degraded: { cls: "warn", label: "Degraded", icon: "fa-triangle-exclamation" },
   down: { cls: "crit", label: "Down", icon: "fa-circle-xmark" },
+};
+
+export const VM_STATE_PILL: Record<VmState, { cls: string; label: string; icon: string }> = {
+  running: { cls: "ok", label: "Running", icon: "fa-circle-check" },
+  stopped: { cls: "crit", label: "Powered Off", icon: "fa-power-off" },
+  suspended: { cls: "warn", label: "Suspended", icon: "fa-pause" },
 };
