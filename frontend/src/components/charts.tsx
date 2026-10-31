@@ -110,3 +110,71 @@ export function Legend({ items }: { items: { label: string; color: string; value
     </div>
   );
 }
+
+export function Donut({ slices, center, sub, size = 150 }: { slices: { label: string; value: number; color: string }[]; center: React.ReactNode; sub?: string; size?: number }) {
+  const total = slices.reduce((a, s) => a + s.value, 0) || 1;
+  const r = 40, c = 2 * Math.PI * r;
+  let offset = 0;
+  return (
+    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+      <svg viewBox="0 0 100 100" width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+        <circle cx={50} cy={50} r={r} fill="none" stroke="#eef1f4" strokeWidth={16} />
+        {slices.filter((s) => s.value > 0).map((s) => {
+          const len = (s.value / total) * c;
+          const el = <circle key={s.label} cx={50} cy={50} r={r} fill="none" stroke={s.color} strokeWidth={16} strokeDasharray={`${len} ${c - len}`} strokeDashoffset={-offset}><title>{`${s.label}: ${s.value}`}</title></circle>;
+          offset += len;
+          return el;
+        })}
+      </svg>
+      <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", textAlign: "center" }}>
+        <div><div style={{ fontSize: size * 0.2, fontWeight: 800, lineHeight: 1 }}>{center}</div>{sub && <div style={{ fontSize: 12, color: "#64748b" }}>{sub}</div>}</div>
+      </div>
+    </div>
+  );
+}
+
+export function StackedBars({ data, keys, labels, height = 190, formatY = (v) => `${v}` }: {
+  data: Record<string, unknown>[]; keys: { key: string; color: string; label: string }[]; labels: string[]; height?: number; formatY?: (v: number) => string;
+}) {
+  const [ref, width] = useWidth<HTMLDivElement>();
+  const [hover, setHover] = React.useState<number | null>(null);
+  const num = (d: Record<string, unknown>, k: string) => Number(d[k] ?? 0);
+  const totals = data.map((d) => keys.reduce((a, k) => a + num(d, k.key), 0));
+  const max = Math.max(1, ...totals);
+  const mag = 10 ** Math.floor(Math.log10(max));
+  const yMax = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((v) => v >= max) ?? 10 * mag;
+  const ticks = [0, yMax / 4, yMax / 2, (yMax * 3) / 4, yMax];
+  const padL = 12 + Math.max(...ticks.map((t) => formatY(t).length)) * 5.6, padB = 22, padT = 8;
+  const plotW = Math.max(10, width - padL - 6), plotH = height - padT - padB;
+  const bw = plotW / data.length;
+  const y = (v: number) => padT + plotH - (v / yMax) * plotH;
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      {width > 0 && (
+        <svg width={width} height={height} style={{ display: "block" }} onMouseLeave={() => setHover(null)}>
+          {ticks.map((t) => <g key={t}><line x1={padL} x2={padL + plotW} y1={y(t)} y2={y(t)} stroke="#eef1f4" />
+            <text x={padL - 6} y={y(t) + 3.5} textAnchor="end" fontSize={10} fill="#8a94a3">{formatY(t)}</text></g>)}
+          {data.map((d, i) => {
+            let acc = 0;
+            return (
+              <g key={i} onMouseEnter={() => setHover(i)}>
+                <rect x={padL + i * bw} y={padT} width={bw} height={plotH} fill={hover === i ? "#f1f5f9" : "transparent"} />
+                {keys.map((k) => {
+                  const v = num(d, k.key); const top = y(acc + v); const h = y(acc) - top; acc += v;
+                  return <rect key={k.key} x={padL + i * bw + bw * 0.15} y={top} width={bw * 0.7} height={Math.max(0, h)} fill={k.color} />;
+                })}
+                {i % Math.ceil(data.length / 6) === 0 && <text x={padL + i * bw + bw / 2} y={height - 6} textAnchor="middle" fontSize={10} fill="#8a94a3">{labels[i]}</text>}
+              </g>
+            );
+          })}
+        </svg>
+      )}
+      {hover != null && width > 0 && (
+        <div className="chart-tip" style={{ left: Math.min(padL + hover * bw + bw, width - 140), top: 4 }}>
+          <div><b>{labels[hover]}</b></div>
+          {keys.map((k) => <div key={k.key}><span className="dot" style={{ background: k.color }} />{k.label}: <b>{num(data[hover], k.key).toLocaleString()}</b></div>)}
+        </div>
+      )}
+    </div>
+  );
+}

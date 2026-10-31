@@ -271,3 +271,94 @@ class DomainApiTests(TestCase):
     def test_writes_need_auth_outside_debug(self):
         self.assertIn(self.client.post("/api/domains/", {"name": "X"}, format="json").status_code, (401, 403))
         self.assertEqual(self.client.get("/api/domains/").status_code, 200)
+
+
+@override_settings(DEBUG=True)
+class ExporterLogApiTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_demo", stdout=open("/dev/null", "w"))
+
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_stats_counts(self):
+        s = self.client.get("/api/exporters/stats/").json()
+        self.assertEqual(s["total"], 87)
+        self.assertEqual(s["byStatus"], {"active": 72, "inactive": 6, "error": 4, "not_configured": 5})
+        self.assertEqual(sum(s["byCategory"].values()), 87)
+        self.assertEqual(len(s["trend"]), 24)
+        self.assertGreater(s["logs24h"], 0)
+
+    def test_list_filters_and_logs24h(self):
+        rows = self.client.get("/api/exporters/?category=databases").json()
+        self.assertTrue(rows and all(r["category"] == "databases" for r in rows))
+        self.assertTrue(any(r["logs24h"] > 0 for r in rows))
+        self.assertEqual([r["name"] for r in self.client.get("/api/exporters/?q=kafka").json()], ["kafka-exporter"])
+
+    def test_create_update_delete(self):
+        body = {"name": "test-exporter", "exporterType": "Node Exporter", "category": "servers", "target": "srv-9", "endpoint": "10.1.2.3:9100"}
+        res = self.client.post("/api/exporters/", body, format="json")
+        self.assertEqual(res.status_code, 201, res.content)
+        self.assertEqual(res.json()["status"], "not_configured")
+        self.assertIn("name", self.client.post("/api/exporters/", body, format="json").json())
+        self.assertIn("endpoint", self.client.post("/api/exporters/", {**body, "name": "x2", "endpoint": "nope"}, format="json").json())
+        upd = self.client.patch("/api/exporters/test-exporter/", {"intervalSec": 300, "endpoint": ""}, format="json")
+        self.assertEqual(upd.json()["intervalSec"], 300)
+        self.assertEqual(upd.json()["status"], "not_configured")
+        self.assertEqual(self.client.delete("/api/exporters/test-exporter/").status_code, 204)
+
+    def test_bulk_action_counts_only_exporters(self):
+        res = self.client.post("/api/exporters/bulk-action/", {"ids": ["mysql-exporter", "redis-exporter"], "action": "delete"}, format="json")
+        self.assertEqual(res.json()["count"], 2)
+        res = self.client.post("/api/exporters/bulk-action/", {"ids": ["kafka-exporter"], "action": "disable"}, format="json")
+        from .models import Exporter
+        self.assertEqual(Exporter.objects.get(pk="kafka-exporter").status, "inactive")
+
+    def test_endpoint_test_against_real_socket(self):
+        import socket
+        from .models import Exporter
+        srv = socket.socket(); srv.bind(("127.0.0.1", 0)); srv.listen()
+        Exporter.objects.filter(pk="kafka-exporter").update(endpoint=f"127.0.0.1:{srv.getsockname()[1]}", status="error")
+        try:
+            res = self.client.post("/api/exporters/kafka-exporter/test/").json()
+        finally:
+            srv.close()
+        self.assertTrue(res["ok"])
+        self.assertEqual(Exporter.objects.get(pk="kafka-exporter").status, "active")
+        Exporter.objects.filter(pk="kafka-exporter").update(status="inactive")
+        srv = socket.socket(); srv.bind(("127.0.0.1", 0)); srv.listen()
+        Exporter.objects.filter(pk="kafka-exporter").update(endpoint=f"127.0.0.1:{srv.getsockname()[1]}")
+        try:
+            res = self.client.post("/api/exporters/kafka-exporter/test/").json()
+        finally:
+            srv.close()
+        self.assertEqual(res["status"], "inactive")  # a disabled exporter stays disabled
+        Exporter.objects.filter(pk="kafka-exporter").update(endpoint="8.8.8.8:53")
+        self.assertEqual(self.client.post("/api/exporters/kafka-exporter/test/").status_code, 400)
+
+    def test_ingest_counts_and_rejects(self):
+        from .models import LogEntry
+        before = self.client.get("/api/exporters/stats/").json()["logs24h"]
+        res = self.client.post("/api/logs/ingest/", {"entries": [
+            {"exporter": "kafka-exporter", "level": "warning", "message": "lag 900"},
+            {"exporter": "nope", "level": "INFO", "message": "x"},
+            {"exporter": "kafka-exporter", "level": "DEBUG", "message": "x"},
+        ]}, format="json").json()
+        self.assertEqual(res, {"accepted": 1, "rejected": [1, 2]})
+        self.assertEqual(LogEntry.objects.first().level, "WARN")
+        self.assertEqual(self.client.get("/api/exporters/stats/").json()["logs24h"], before + 1)
+        self.assertEqual(self.client.get("/api/logs/?exporter=kafka-exporter&limit=1").json()[0]["message"], "lag 900")
+        self.assertEqual(self.client.post("/api/logs/ingest/", {"entries": []}, format="json").status_code, 400)
+
+    def test_events_merge_vm_and_device_events(self):
+        ev = self.client.get("/api/events/?limit=20").json()
+        sources = {e["source"] for e in ev}
+        self.assertTrue(any(s.startswith("VM-") for s in sources) and any(s.startswith("N") for s in sources))
+        self.assertEqual(ev, sorted(ev, key=lambda e: e["ts"], reverse=True))
+
+    @override_settings(DEBUG=False)
+    def test_writes_need_auth_outside_debug(self):
+        self.assertIn(self.client.post("/api/logs/ingest/", {"entries": [{"exporter": "kafka-exporter", "level": "INFO", "message": "x"}]}, format="json").status_code, (401, 403))
+        self.assertIn(self.client.delete("/api/exporters/kafka-exporter/").status_code, (401, 403))
+        self.assertEqual(self.client.get("/api/exporters/").status_code, 200)

@@ -473,3 +473,79 @@ a.btn { text-decoration: none; }
 
 @media (max-width: 1400px) { .hm-layout { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 900px) { .dom-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dd-grid { grid-template-columns: minmax(0, 1fr); } .hm-legend { margin-left: 0; } }
+
+/* ---------- exporters, logs & events ---------- */
+.modal:has(.form-grid) { max-width: 620px; }
+.title-with-icon { display: flex; gap: 14px; align-items: center; }
+.title-with-icon > i { font-size: 34px; color: var(--link); }
+.ex-kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+.ex-kpi { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 14px; display: flex; align-items: center; gap: 12px; position: relative; min-width: 0; }
+.ex-kpi > div { display: flex; flex-direction: column; min-width: 0; }
+.ex-kpi b { font-size: 24px; font-weight: 800; line-height: 1.1; }
+.ex-kpi span { font-size: 12.5px; color: #475569; }
+.ek-icon { width: 46px; height: 46px; border-radius: 10px; display: grid; place-items: center; font-size: 20px; flex-shrink: 0; }
+.ek-icon.active { background: #16a34a; color: white; border-radius: 50%; } .ek-icon.inactive { background: #64748b; color: white; border-radius: 50%; }
+.ek-icon.error { background: #ef4444; color: white; }
+.chg { position: absolute; top: 12px; right: 12px; font-size: 12px !important; font-weight: 700; padding: 2px 7px; border-radius: 5px; }
+.chg.up { background: #dcfce7; color: #15803d !important; } .chg.down { background: #fee2e2; color: #b91c1c !important; }
+.chg.flat.active { background: #dcfce7; color: #15803d !important; } .chg.flat.inactive { background: #f1f5f9; } .chg.flat.error { background: #fee2e2; color: #b91c1c !important; }
+.cat-tiles { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 6px; padding: 8px; margin-bottom: 16px; }
+.cat-tile { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 4px; border: none; background: none; border-radius: 8px; cursor: pointer; font-family: inherit; color: #334155; font-size: 12.5px; min-width: 0; }
+.cat-tile i { font-size: 22px; }
+.cat-tile b { font-size: 14px; }
+.cat-tile span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.cat-tile:hover { background: #f1f5f9; }
+.cat-tile.active { background: var(--link); color: white; }
+.ex-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 16px; margin-bottom: 16px; align-items: start; }
+.ex-bottom { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.1fr) minmax(0, 0.95fr) minmax(0, 1.05fr); gap: 16px; }
+.bulk-bar { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: #eff6ff; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+.row-actions button { background: none; border: none; cursor: pointer; color: #334155; padding: 3px 5px; font-size: 13px; }
+.row-actions button:hover:not(:disabled) { color: var(--link); }
+.row-actions button:disabled { opacity: .35; cursor: not-allowed; }
+.row-actions button.danger { color: var(--crit); }
+.link-btn.plain { padding: 0; font-weight: 500; font-size: 12.5px; }
+.logs-ctrl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.logs-scroll { max-height: 520px; overflow: auto; }
+.switch { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; cursor: pointer; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch span { width: 32px; height: 18px; background: #cbd5e1; border-radius: 10px; position: relative; transition: background .15s; }
+.switch span::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: white; transition: left .15s; }
+.switch input:checked + span { background: var(--link); }
+.switch input:checked + span::after { left: 16px; }
+.switch input:focus-visible + span { outline: 2px solid #93c5fd; }
+.lvl-tag { font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
+.lvl-tag.info { background: #dbeafe; color: #1d4ed8; } .lvl-tag.warn { background: #fef3c7; color: #b45309; } .lvl-tag.error { background: #fee2e2; color: #b91c1c; }
+.donut-wrap { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.donut-legend { display: flex; flex-direction: column; gap: 10px; font-size: 12.5px; flex: 1; min-width: 150px; }
+.donut-legend div { display: flex; align-items: center; }
+.donut-legend b { margin-left: auto; padding-left: 10px; }
+.top-sources { display: flex; flex-direction: column; gap: 9px; font-size: 12px; }
+.top-sources > div { display: grid; grid-template-columns: 130px 1fr 60px; align-items: center; gap: 8px; }
+.ts-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top-sources b { text-align: right; font-weight: 600; }
+.ts-bar .meter { height: 12px; margin: 0; border-radius: 2px; }
+.ts-bar .meter > div { border-radius: 2px; }
+
+@media (max-width: 1300px) {
+  .ex-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cat-tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .ex-grid { grid-template-columns: minmax(0, 1fr); }
+  .ex-bottom { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 800px) {
+  .ex-kpis, .ex-bottom { grid-template-columns: minmax(0, 1fr); }
+  .cat-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+/* exporters polish */
+.ex-kpi { align-items: flex-start; }
+.ex-kpi > .ek-icon { align-self: center; }
+.ex-kpi > div { flex: 1; }
+.ex-kpi .chg { position: static; align-self: flex-start; margin-top: 4px; }
+.ex-kpi { align-items: center; }
+.ex-grid { grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); }
+.ex-table th, .ex-table td { white-space: nowrap; padding: 7px 8px; }
+.ex-table td.mono { max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+.row-actions button { padding: 3px 4px; font-size: 12.5px; }
+.card-title { white-space: nowrap; }
+.ex-table th:last-child, .ex-table td:last-child { position: sticky; right: 0; background: white; box-shadow: -6px 0 6px -6px rgba(15,23,42,.15); }
+.ex-table th:last-child { background: #fafbfc; }

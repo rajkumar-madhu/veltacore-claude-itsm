@@ -271,3 +271,70 @@ export function useDeleteDomain() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["domains"] }),
   });
 }
+
+// ---- Exporters, logs & events ----
+export type ExporterStatus = "active" | "inactive" | "error" | "not_configured";
+export type ExporterCategory = "network" | "firewalls" | "servers" | "virtualization" | "storage" | "databases"
+  | "applications" | "kubernetes" | "wireless" | "security" | "custom";
+
+export interface ExporterRow {
+  id: string; name: string; exporterType: string; category: ExporterCategory; target: string; endpoint: string;
+  siteId: string | null; siteName: string | null; status: ExporterStatus; intervalSec: number;
+  lastSeen: string | null; lastError: string; createdAt: string; logs24h: number;
+}
+export interface ExporterDetail extends ExporterRow {
+  recentLogs: { id: number; ts: string; level: string; message: string }[];
+  hourly: { hour: string; info: number; warn: number; error: number }[];
+}
+export interface ExporterStats {
+  total: number; totalChangePct: number | null; byStatus: Record<ExporterStatus, number>; byCategory: Record<ExporterCategory, number>;
+  logs24h: number; logsChangePct: number | null; events24h: number; eventsChangePct: number | null;
+  trend: { hour: string; info: number; warn: number; error: number }[];
+  topSources: { id: string; name: string; count: number }[];
+}
+export interface LogRow { id: number; ts: string; exporter: string; exporterId: string; level: "INFO" | "WARN" | "ERROR"; message: string }
+export interface EventRow { ts: string; severity: "info" | "warning" | "critical"; source: string; message: string }
+export interface ExporterWrite {
+  name: string; exporterType: string; category: ExporterCategory; target: string; endpoint: string; site: string | null; intervalSec: number;
+}
+
+export function useExporters() {
+  return useQuery({ ...quiet, queryKey: ["exporters", "list"], queryFn: () => apiGet<ExporterRow[]>("/exporters/") });
+}
+export function useExporter(id: string | undefined) {
+  return useQuery({ ...quiet, queryKey: ["exporters", "detail", id], enabled: !!id, queryFn: () => apiGet<ExporterDetail>(`/exporters/${id}/`) });
+}
+export function useExporterStats() {
+  return useQuery({ ...quiet, queryKey: ["exporters", "stats"], queryFn: () => apiGet<ExporterStats>("/exporters/stats/") });
+}
+export function useLogs(params: { exporter?: string; level?: string }, live: boolean) {
+  const qs = new URLSearchParams({ limit: "40", ...Object.fromEntries(Object.entries(params).filter(([, v]) => v)) }).toString();
+  return useQuery({ ...quiet, queryKey: ["logs", qs], queryFn: () => apiGet<LogRow[]>(`/logs/?${qs}`), refetchInterval: live ? 3000 : false });
+}
+export function useEvents() {
+  return useQuery({ ...quiet, queryKey: ["events"], queryFn: () => apiGet<EventRow[]>("/events/?limit=8") });
+}
+
+async function apiSend<T>(method: "PATCH" | "DELETE", path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`/api${path}`, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+  const data = res.status === 204 ? {} : await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(typeof data.detail === "string" ? data.detail : `Request failed (${res.status})`) as Error & { fields?: Record<string, string[]> };
+    if (!data.detail) err.fields = data;
+    throw err;
+  }
+  return data as T;
+}
+
+export function useExporterMutations() {
+  const qc = useQueryClient();
+  const done = () => qc.invalidateQueries({ queryKey: ["exporters"] });
+  return {
+    create: useMutation({ mutationFn: (b: ExporterWrite) => apiPost<ExporterRow>("/exporters/", b), onSuccess: done }),
+    update: useMutation({ mutationFn: ({ id, ...b }: Partial<ExporterWrite> & { id: string }) => apiSend<ExporterRow>("PATCH", `/exporters/${id}/`, b), onSuccess: done }),
+    remove: useMutation({ mutationFn: (id: string) => apiSend<void>("DELETE", `/exporters/${id}/`), onSuccess: done }),
+    test: useMutation({ mutationFn: (id: string) => apiPost<{ ok: boolean; latencyMs: number | null; detail: string }>(`/exporters/${id}/test/`, {}), onSettled: done }),
+    bulk: useMutation({ mutationFn: (b: { ids: string[]; action: "enable" | "disable" | "delete" }) => apiPost<{ detail: string; count: number }>("/exporters/bulk-action/", b), onSuccess: done }),
+    importRows: useMutation({ mutationFn: (rows: Record<string, unknown>[]) => apiPost<{ created: string[]; errors: { row: number; errors: Record<string, string[]> }[] }>("/exporters/import/", { rows }), onSuccess: done }),
+  };
+}

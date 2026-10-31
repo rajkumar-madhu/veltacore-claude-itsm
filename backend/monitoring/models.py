@@ -286,3 +286,57 @@ class Incident(models.Model):
 
     class Meta:
         ordering = ["-opened_at"]
+
+
+class Exporter(models.Model):
+    """A metrics/log exporter Argus scrapes or receives data from."""
+    CATEGORY_CHOICES = [
+        ("network", "Network"), ("firewalls", "Firewalls"), ("servers", "Servers"), ("virtualization", "Virtualization"),
+        ("storage", "Storage"), ("databases", "Databases"), ("applications", "Applications"), ("kubernetes", "Kubernetes"),
+        ("wireless", "Wireless"), ("security", "Security"), ("custom", "Custom"),
+    ]
+    STATUS_CHOICES = [("active", "Active"), ("inactive", "Inactive"), ("error", "Error"), ("not_configured", "Not Configured")]
+
+    id = models.SlugField(primary_key=True, max_length=64)
+    name = models.CharField(max_length=64, unique=True)
+    exporter_type = models.CharField(max_length=32)
+    category = models.CharField(max_length=16, choices=CATEGORY_CHOICES)
+    target = models.CharField(max_length=200)                    # what it monitors
+    endpoint = models.CharField(max_length=128, blank=True, default="")  # host:port the exporter listens on
+    site = models.ForeignKey(Site, on_delete=models.PROTECT, null=True, blank=True, related_name="exporters")
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default="not_configured")
+    interval_sec = models.PositiveIntegerField(default=60, validators=[MinValueValidator(10), MaxValueValidator(3600)])
+    last_seen = models.DateTimeField(null=True, blank=True)
+    last_error = models.CharField(max_length=200, blank=True, default="")
+    created_at = models.DateTimeField()
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class LogVolume(models.Model):
+    """Hourly per-exporter log counts. Full log bodies are not retained here
+    (only a recent tail in LogEntry), so counts are tracked separately."""
+    exporter = models.ForeignKey(Exporter, on_delete=models.CASCADE, related_name="log_volumes")
+    hour = models.DateTimeField()
+    info = models.PositiveIntegerField(default=0)
+    warn = models.PositiveIntegerField(default=0)
+    error = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["exporter", "hour"], name="uniq_logvolume_hour")]
+        indexes = [models.Index(fields=["hour"])]
+
+
+class LogEntry(models.Model):
+    LEVEL_CHOICES = [("INFO", "Info"), ("WARN", "Warn"), ("ERROR", "Error")]
+    exporter = models.ForeignKey(Exporter, on_delete=models.CASCADE, related_name="log_entries")
+    ts = models.DateTimeField(db_index=True)
+    level = models.CharField(max_length=5, choices=LEVEL_CHOICES)
+    message = models.CharField(max_length=300)
+
+    class Meta:
+        ordering = ["-ts", "-id"]

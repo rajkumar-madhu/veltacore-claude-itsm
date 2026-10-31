@@ -167,3 +167,19 @@ def perform(device_id, action, payload):
         if action in HANDLERS:
             return HANDLERS[action](d, payload)
     raise ActionError(f"Unknown action '{action}'.")
+
+
+def check_endpoint(endpoint):
+    """TCP connect to an exporter's host:port. Same private-range guard as discovery."""
+    host, sep, port_s = endpoint.rpartition(":")
+    if not sep or not port_s.isdigit() or not (0 < int(port_s) < 65536) or not host:
+        raise ActionError("Endpoint must look like host:port.")
+    try:
+        infos = socket.getaddrinfo(host.strip("[]"), int(port_s), proto=socket.IPPROTO_TCP)
+    except OSError:
+        return False, None, f"Cannot resolve {host}"
+    ip = ipaddress.ip_address(infos[0][4][0])
+    if not (ip.is_private or ip.is_loopback or ip.is_link_local):
+        raise ActionError("Only private, loopback and link-local endpoints can be tested.")
+    _, ok, latency, _ = _probe(str(ip), int(port_s))
+    return ok, latency, None if ok else f"No response on {ip}:{port_s}"

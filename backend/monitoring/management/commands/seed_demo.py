@@ -1,9 +1,10 @@
 from django.core.management.base import BaseCommand
 
-from monitoring.models import Monitor, NetworkDevice, Site, Slo, SyntheticCheck, VirtualMachine
+from monitoring.models import Exporter, Monitor, NetworkDevice, Site, Slo, SyntheticCheck, VirtualMachine
 
 from ._seed_devices import seed_devices
 from ._seed_domains import seed_domains
+from ._seed_exporters import seed_exporters
 from ._seed_vms import seed_vms
 
 
@@ -11,8 +12,10 @@ class Command(BaseCommand):
     help = "Seed demo data for the monitoring app."
 
     def handle(self, *args, **opts):
-        VirtualMachine.objects.all().delete()  # VMs and devices reference sites (PROTECT)
+        # VMs, devices and exporters reference sites (PROTECT)
+        VirtualMachine.objects.all().delete()
         NetworkDevice.objects.all().delete()
+        Exporter.objects.all().delete()
         Site.objects.all().delete()
         Site.objects.bulk_create([
             Site(id="dc-blr-1", name="Bangalore DC-1", region="APAC", devices=412, health=96, lat=12.97, lng=77.59),
@@ -59,8 +62,9 @@ class Command(BaseCommand):
         vm_count = seed_vms(sites)
         device_count = seed_devices(sites)
         domain_count = seed_domains()
+        exporter_count = seed_exporters(sites)
 
         self.stdout.write(self.style.SUCCESS(
             f"Seeded {Site.objects.count()} sites, {Slo.objects.count()} SLOs, "
-            f"{Monitor.objects.count()} monitors, {SyntheticCheck.objects.count()} synthetic checks, {vm_count} VMs, {device_count} devices, {domain_count} domains."
+            f"{Monitor.objects.count()} monitors, {SyntheticCheck.objects.count()} synthetic checks, {vm_count} VMs, {device_count} devices, {domain_count} domains, {exporter_count} exporters."
         ))

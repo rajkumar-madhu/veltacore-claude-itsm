@@ -4,7 +4,7 @@ from rest_framework import serializers
 import re
 
 from .models import (
-    BusinessDomain, Datastore, DeviceEvent, Monitor, NetworkDevice, Site, Slo, Snapshot, SyntheticCheck,
+    BusinessDomain, Datastore, DeviceEvent, Exporter, Monitor, NetworkDevice, Site, Slo, Snapshot, SyntheticCheck,
     VirtualMachine, VmEvent,
 )
 
@@ -241,4 +241,51 @@ class DomainCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError("Name must contain letters or digits.")
         if BusinessDomain.objects.filter(name__iexact=v).exists() or BusinessDomain.objects.filter(pk=slugify(v)).exists():
             raise serializers.ValidationError(f"A domain named {v} already exists.")
+        return v
+
+
+class ExporterSerializer(serializers.ModelSerializer):
+    exporterType = serializers.CharField(source="exporter_type")
+    siteId = serializers.CharField(source="site_id", allow_null=True)
+    siteName = serializers.CharField(source="site.name", default=None)
+    intervalSec = serializers.IntegerField(source="interval_sec")
+    lastSeen = serializers.DateTimeField(source="last_seen")
+    lastError = serializers.CharField(source="last_error")
+    createdAt = serializers.DateTimeField(source="created_at")
+    logs24h = serializers.IntegerField(read_only=True, default=0)
+
+    class Meta:
+        model = Exporter
+        fields = ["id", "name", "exporterType", "category", "target", "endpoint", "siteId", "siteName", "status",
+                  "intervalSec", "lastSeen", "lastError", "createdAt", "logs24h"]
+
+
+ENDPOINT_RE = re.compile(r"^[A-Za-z0-9.\-\[\]:]+:\d{1,5}$")
+
+
+class ExporterWriteSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=64)
+    exporterType = serializers.CharField(max_length=32)
+    category = serializers.ChoiceField(choices=[c for c, _ in Exporter.CATEGORY_CHOICES])
+    target = serializers.CharField(max_length=200)
+    endpoint = serializers.CharField(max_length=128, allow_blank=True, default="")
+    site = serializers.SlugRelatedField(slug_field="id", queryset=Site.objects.all(), allow_null=True, required=False, default=None)
+    intervalSec = serializers.IntegerField(min_value=10, max_value=3600, default=60)
+
+    def validate_name(self, v):
+        from django.utils.text import slugify
+        v = v.strip()
+        if not slugify(v):
+            raise serializers.ValidationError("Name must contain letters or digits.")
+        qs = Exporter.objects.filter(pk=slugify(v)[:64])
+        if self.instance is not None:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError(f"An exporter named {v} already exists.")
+        return v
+
+    def validate_endpoint(self, v):
+        v = v.strip()
+        if v and not ENDPOINT_RE.match(v):
+            raise serializers.ValidationError("Use host:port, e.g. 10.10.1.200:9100.")
         return v
