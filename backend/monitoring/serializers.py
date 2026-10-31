@@ -4,7 +4,8 @@ from rest_framework import serializers
 import re
 
 from .models import (
-    Datastore, DeviceEvent, Monitor, NetworkDevice, Site, Slo, Snapshot, SyntheticCheck, VirtualMachine, VmEvent,
+    BusinessDomain, Datastore, DeviceEvent, Monitor, NetworkDevice, Site, Slo, Snapshot, SyntheticCheck,
+    VirtualMachine, VmEvent,
 )
 
 
@@ -227,3 +228,17 @@ class DeviceEditSerializer(serializers.Serializer):
     location = serializers.CharField(max_length=64, allow_blank=True)
     contact = serializers.EmailField(allow_blank=True)
     description = serializers.CharField(max_length=240, allow_blank=True)
+
+
+class DomainCreateSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=64)
+    description = serializers.CharField(max_length=200, allow_blank=True, default="")
+
+    def validate_name(self, v):
+        from django.utils.text import slugify
+        v = v.strip()
+        if not slugify(v):
+            raise serializers.ValidationError("Name must contain letters or digits.")
+        if BusinessDomain.objects.filter(name__iexact=v).exists() or BusinessDomain.objects.filter(pk=slugify(v)).exists():
+            raise serializers.ValidationError(f"A domain named {v} already exists.")
+        return v

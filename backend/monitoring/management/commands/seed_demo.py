@@ -3,6 +3,7 @@ from django.core.management.base import BaseCommand
 from monitoring.models import Monitor, NetworkDevice, Site, Slo, SyntheticCheck, VirtualMachine
 
 from ._seed_devices import seed_devices
+from ._seed_domains import seed_domains
 from ._seed_vms import seed_vms
 
 
@@ -57,8 +58,9 @@ class Command(BaseCommand):
         sites = {s.id: s for s in Site.objects.all()}
         vm_count = seed_vms(sites)
         device_count = seed_devices(sites)
+        domain_count = seed_domains()
 
         self.stdout.write(self.style.SUCCESS(
             f"Seeded {Site.objects.count()} sites, {Slo.objects.count()} SLOs, "
-            f"{Monitor.objects.count()} monitors, {SyntheticCheck.objects.count()} synthetic checks, {vm_count} VMs, {device_count} devices."
+            f"{Monitor.objects.count()} monitors, {SyntheticCheck.objects.count()} synthetic checks, {vm_count} VMs, {device_count} devices, {domain_count} domains."
         ))

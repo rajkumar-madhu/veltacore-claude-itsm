@@ -9,12 +9,14 @@ import VmDetailScreen from "@/screens/vm/VmDetailScreen";
 import DeviceListScreen from "@/screens/device/DeviceListScreen";
 import DeviceDetailScreen from "@/screens/device/DeviceDetailScreen";
 import OnboardingScreen from "@/screens/onboarding/OnboardingScreen";
+import HeatmapScreen from "@/screens/heatmap/HeatmapScreen";
 
 const NAV = [
   { group: "Operate", items: [{ to: "/", label: "Dashboard", icon: "fa-gauge-high" }] },
   {
     group: "Observe",
     items: [
+      { to: "/heatmap", label: "Heatmap & Domains", icon: "fa-table-cells" },
       { to: "/slos", label: "SLOs", icon: "fa-bullseye" },
       { to: "/monitors", label: "Monitors", icon: "fa-bell" },
       { to: "/synthetics", label: "Synthetics", icon: "fa-globe" },
@@ -92,6 +94,7 @@ export default function App() {
           <Route path="/devices" element={<DeviceListScreen />} />
           <Route path="/devices/:id" element={<DeviceDetailScreen />} />
           <Route path="/onboarding" element={<OnboardingScreen />} />
+          <Route path="/heatmap" element={<HeatmapScreen />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

@@ -225,3 +225,49 @@ export function useBulkImport() {
 export function useDiscover() {
   return useMutation({ mutationFn: (ip: string) => apiPost<DiscoveryResult>("/devices/discover/", { ip }) });
 }
+
+// ---- Business domains / heatmap ----
+export type Health = "ok" | "warn" | "crit" | "unknown";
+export type MetricKey = "availability" | "responseMs" | "errorRate" | "latencyP95Ms" | "cpuPct" | "memPct" | "diskPct" | "netPct";
+
+export interface ServiceSnap {
+  id: number; name: string; host: string; health: Health;
+  values: Record<MetricKey, number | null>; statuses: Record<MetricKey, Health>;
+}
+export interface DomainRow {
+  id: string; name: string; description: string; icon: string; serviceCount: number; health: Health;
+  availability: number | null; errorRate: number | null; latencyP95Ms: number | null; services: ServiceSnap[];
+}
+export interface DomainDetail extends DomainRow {
+  flow: { label: string; health: Health }[];
+  incidents: { id: string; priority: string; title: string; status: string; openedAt: string; service: string | null }[];
+  logs: VmLogLine[];
+  traces: { traceId: string; root: string; service: string; durationMs: number; spans: number; status: string }[];
+}
+
+export function useDomains() {
+  return useQuery({ ...quiet, queryKey: ["domains"], queryFn: () => apiGet<DomainRow[]>("/domains/") });
+}
+
+export function useDomain(id: string | undefined) {
+  return useQuery({ ...quiet, queryKey: ["domains", id], enabled: !!id, queryFn: () => apiGet<DomainDetail>(`/domains/${id}/`) });
+}
+
+export function useCreateDomain() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { name: string; description: string }) => apiPost<DomainDetail>("/domains/", body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["domains"] }),
+  });
+}
+
+export function useDeleteDomain() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/domains/${id}/`, { method: "DELETE" });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail ?? `Delete failed (${res.status})`);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["domains"] }),
+  });
+}

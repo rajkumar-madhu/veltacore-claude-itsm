@@ -406,3 +406,70 @@ a.btn { text-decoration: none; }
 
 @media (max-width: 1200px) { .onb-grid, .onb-grid.bottom { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 700px) { .form-grid, .check-grid { grid-template-columns: minmax(0, 1fr); } .form-grid .field.wide { grid-column: auto; } }
+
+/* ---------- heatmap & domains ---------- */
+.live { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--ok); }
+.live-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 0 rgba(5,150,105,.5); animation: livePulse 1.8s infinite; }
+@keyframes livePulse { 70% { box-shadow: 0 0 0 7px rgba(5,150,105,0); } 100% { box-shadow: 0 0 0 0 rgba(5,150,105,0); } }
+.filter-bar { display: flex; align-items: center; gap: 10px; padding: 12px 14px; margin-bottom: 16px; flex-wrap: wrap; }
+.filter-bar .select-sm { min-width: 140px; padding: 8px 10px; }
+.hm-legend { display: flex; gap: 16px; font-size: 12.5px; color: #334155; margin-left: auto; flex-wrap: wrap; }
+.filter-actions { display: flex; gap: 8px; }
+.hm-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 16px; align-items: start; }
+.hm-card { padding: 4px 6px; }
+.hm-card:fullscreen { background: white; padding: 24px; overflow: auto; }
+.hm-table { width: 100%; border-collapse: separate; border-spacing: 4px 3px; font-size: 12.5px; }
+.hm-table th { font-size: 11px; font-weight: 700; color: #334155; text-align: center; padding: 8px 2px; white-space: nowrap; }
+.hm-table th:first-child { text-align: left; padding-left: 6px; }
+.hm-table td:first-child { white-space: nowrap; padding-right: 10px; }
+.hm-domain td:first-child { font-weight: 800; font-size: 13.5px; padding-top: 8px; }
+.hm-domain .icon-btn { font-size: 11px; padding: 2px 4px; }
+.hm-svc td:first-child { padding-left: 30px; color: #334155; }
+.hm-svc, .hm-domain { cursor: pointer; }
+.hm-svc.sel td:first-child { color: var(--link); font-weight: 600; }
+.hm-cell { padding: 0; }
+.hm-box { display: block; height: 20px; min-width: 34px; border-radius: 3px; transition: transform .08s; }
+.hm-box:hover { transform: scale(1.08); box-shadow: 0 0 0 2px rgba(15,23,42,.25); }
+.hm-box.ok { background: #4caf50; } .hm-box.warn { background: #f5b82e; } .hm-box.crit { background: #ef4444; } .hm-box.unknown { background: #d5dbe3; }
+.unknown-text { color: var(--muted); }
+
+.dom-title { font-size: 20px; font-weight: 800; }
+.dom-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+.dom-kpi { display: flex; align-items: center; gap: 10px; border: 1px solid var(--border); border-radius: 8px; padding: 10px; min-width: 0; }
+.dom-kpi div { display: flex; flex-direction: column; font-size: 11.5px; color: #475569; min-width: 0; }
+.dom-kpi b { font-size: 19px; color: var(--ink); }
+.dk-icon { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; flex-shrink: 0; }
+.dk-icon.info { background: #eff6ff; color: var(--link); } .dk-icon.ok { background: #dcfce7; color: #16a34a; }
+.dk-icon.warn { background: #fef3c7; color: #d97706; } .dk-icon.crit { background: #fee2e2; color: #dc2626; } .dk-icon.unknown { background: #f1f5f9; color: #64748b; }
+.row-sel { background: #eff6ff; }
+.menu button:disabled { opacity: .45; cursor: not-allowed; }
+.pager { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+.pager > div { display: flex; gap: 6px; align-items: center; }
+.page-no { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 6px; background: var(--link); color: white; font-size: 12.5px; font-weight: 700; }
+
+.pill-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.pill-tabs button { border: 1px solid var(--border); background: white; padding: 7px 14px; border-radius: 6px; font-size: 12.5px; cursor: pointer; font-family: inherit; color: #334155; }
+.pill-tabs button.active { background: var(--link); border-color: var(--link); color: white; font-weight: 600; }
+.dd-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; }
+.dd-hero { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; }
+.dd-hero > i { font-size: 26px; color: var(--link); }
+.dd-hero b { font-size: 15px; }
+.dd-avail { display: flex; flex-direction: column; align-items: flex-end; font-size: 11.5px; color: #475569; }
+.dd-avail b { font-size: 19px; color: var(--ink); }
+.mini-title { font-weight: 700; font-size: 13px; margin: 6px 0 8px; }
+.inc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; font-size: 12px; }
+.inc-list li { display: flex; align-items: center; gap: 8px; }
+.inc-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prio { font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: 4px; }
+.prio.P1 { background: #fee2e2; color: #b91c1c; } .prio.P2 { background: #ffedd5; color: #c2410c; } .prio.P3 { background: #fef9c3; color: #a16207; } .prio.P4 { background: #f1f5f9; color: #475569; }
+.flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 0; }
+.flow-arrow { color: #94a3b8; font-size: 12px; }
+.flow-node { display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 11px; color: #334155; min-width: 60px; text-align: center; }
+.flow-icon { width: 40px; height: 40px; border-radius: 8px; display: grid; place-items: center; font-size: 18px; color: var(--link); background: #eff6ff; border: 2px solid transparent; }
+.flow-node.crit .flow-icon { color: #dc2626; background: #fee2e2; border-color: #ef4444; }
+.flow-node.crit { color: #b91c1c; font-weight: 700; }
+.flow-node.warn .flow-icon { color: #b45309; background: #fef3c7; }
+.flow-node.ok .flow-icon { color: #16a34a; background: #dcfce7; }
+
+@media (max-width: 1400px) { .hm-layout { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 900px) { .dom-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dd-grid { grid-template-columns: minmax(0, 1fr); } .hm-legend { margin-left: 0; } }

@@ -228,3 +228,61 @@ class DeviceEvent(models.Model):
 
     class Meta:
         ordering = ["-ts", "-id"]
+
+
+class BusinessDomain(models.Model):
+    """A business domain (Trading, Infrastructure, …) grouping the services
+    shown on the heatmap. Health is derived from its services, never stored."""
+    id = models.SlugField(primary_key=True, max_length=48)
+    name = models.CharField(max_length=64, unique=True)
+    description = models.CharField(max_length=200, blank=True, default="")
+    icon = models.CharField(max_length=32, default="fa-layer-group")
+    sort_order = models.PositiveSmallIntegerField(default=100)
+    # Ordered request path through the domain for the topology strip, e.g.
+    # ["Exchange", "Market Data", "OMS", "Risk Engine", "Database"].
+    flow = models.JSONField(default=list, blank=True)
+    # Recent domain-level log lines and sampled traces.
+    details = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["sort_order", "name"]
+
+    def __str__(self):
+        return self.name
+
+
+class DomainService(models.Model):
+    domain = models.ForeignKey(BusinessDomain, on_delete=models.CASCADE, related_name="services")
+    name = models.CharField(max_length=64)
+    host = models.CharField(max_length=64, blank=True, default="")
+    # Current values; null means "no data" (shown as Unknown).
+    availability = models.FloatField(null=True, blank=True)        # %
+    response_ms = models.FloatField(null=True, blank=True)         # avg response time
+    error_rate = models.FloatField(null=True, blank=True)          # %
+    latency_p95_ms = models.FloatField(null=True, blank=True)
+    cpu_pct = models.FloatField(null=True, blank=True)
+    mem_pct = models.FloatField(null=True, blank=True)
+    disk_pct = models.FloatField(null=True, blank=True)
+    net_pct = models.FloatField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["domain", "id"]
+        constraints = [models.UniqueConstraint(fields=["domain", "name"], name="uniq_service_per_domain")]
+
+    def __str__(self):
+        return f"{self.domain_id}/{self.name}"
+
+
+class Incident(models.Model):
+    PRIORITY_CHOICES = [("P1", "P1"), ("P2", "P2"), ("P3", "P3"), ("P4", "P4")]
+    STATUS_CHOICES = [("open", "Open"), ("resolved", "Resolved")]
+    id = models.CharField(primary_key=True, max_length=16)          # "INC000123"
+    domain = models.ForeignKey(BusinessDomain, on_delete=models.CASCADE, related_name="incidents")
+    service = models.ForeignKey(DomainService, on_delete=models.SET_NULL, null=True, blank=True, related_name="incidents")
+    priority = models.CharField(max_length=2, choices=PRIORITY_CHOICES)
+    title = models.CharField(max_length=160)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="open")
+    opened_at = models.DateTimeField()
+
+    class Meta:
+        ordering = ["-opened_at"]

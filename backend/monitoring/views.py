@@ -6,10 +6,13 @@ from rest_framework.decorators import action
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 
+from django.utils.text import slugify
+
 from . import device_actions, vm_actions
-from .models import Monitor, NetworkDevice, Site, Slo, Snapshot, SyntheticCheck, VirtualMachine
+from .domain_health import domain_summary
+from .models import BusinessDomain, Monitor, NetworkDevice, Site, Slo, Snapshot, SyntheticCheck, VirtualMachine
 from .serializers import (
-    DeviceDetailSerializer, DeviceListSerializer, DeviceOnboardSerializer, MonitorSerializer,
+    DeviceDetailSerializer, DeviceListSerializer, DeviceOnboardSerializer, DomainCreateSerializer, MonitorSerializer,
     SiteSerializer, SloSerializer, SyntheticCheckSerializer, VmDetailSerializer, VmListSerializer,
 )
 
@@ -118,3 +121,51 @@ class NetworkDeviceViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, vie
         except device_actions.ActionError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"detail": message})
+
+
+def _domain_payload(domain, detail=False):
+    summary = domain_summary(domain, domain.services.all())
+    out = {"id": domain.id, "name": domain.name, "description": domain.description, "icon": domain.icon,
+           "serviceCount": len(summary["services"]), **summary}
+    if detail:
+        health_by_name = {s["name"].lower(): s["health"] for s in summary["services"]}
+        out["flow"] = [{"label": n, "health": health_by_name.get(n.lower(), "unknown")} for n in domain.flow]
+        out["incidents"] = [
+            {"id": i.id, "priority": i.priority, "title": i.title, "status": i.status, "openedAt": i.opened_at,
+             "service": i.service.name if i.service else None}
+            for i in domain.incidents.select_related("service").all()
+        ]
+        out["logs"] = domain.details.get("logs", [])
+        out["traces"] = domain.details.get("traces", [])
+    return out
+
+
+class BusinessDomainViewSet(viewsets.ViewSet):
+    def get_permissions(self):
+        return [DebugOrAuthenticated()] if self.request.method in ("POST", "DELETE") else []
+
+    def list(self, request):
+        return Response([_domain_payload(d) for d in BusinessDomain.objects.prefetch_related("services")])
+
+    def retrieve(self, request, pk=None):
+        domain = BusinessDomain.objects.prefetch_related("services").filter(pk=pk).first()
+        if domain is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(_domain_payload(domain, detail=True))
+
+    def create(self, request):
+        s = DomainCreateSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        last = BusinessDomain.objects.order_by("-sort_order").values_list("sort_order", flat=True).first() or 0
+        d = BusinessDomain.objects.create(id=slugify(s.validated_data["name"])[:48], name=s.validated_data["name"],
+                                          description=s.validated_data["description"], sort_order=last + 1)
+        return Response(_domain_payload(d, detail=True), status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, pk=None):
+        domain = BusinessDomain.objects.filter(pk=pk).first()
+        if domain is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        if domain.services.exists():
+            return Response({"detail": "Move or remove this domain's services before deleting it."}, status=status.HTTP_400_BAD_REQUEST)
+        domain.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

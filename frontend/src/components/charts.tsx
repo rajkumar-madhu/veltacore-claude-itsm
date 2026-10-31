@@ -34,10 +34,11 @@ export function Sparkline({ data, color, height = 30 }: { data: number[]; color:
 export interface ChartSeries { label: string; color: string; data: number[]; fill?: boolean }
 
 export function LineChart({
-  series, xTicks, yMax, yTicks, formatY = (v) => `${v}`, height = 170,
+  series, xTicks, yMin = 0, yMax, yTicks, formatY = (v) => `${v}`, height = 170,
 }: {
   series: ChartSeries[];
   xTicks: string[];
+  yMin?: number;
   yMax: number;
   yTicks: number[];
   formatY?: (v: number) => string;
@@ -50,7 +51,7 @@ export function LineChart({
   const plotH = height - padT - padB;
   const n = series[0]?.data.length ?? 0;
   const x = (i: number) => padL + (i / Math.max(1, n - 1)) * plotW;
-  const y = (v: number) => padT + plotH - (Math.min(v, yMax) / yMax) * plotH;
+  const y = (v: number) => padT + plotH - ((Math.min(Math.max(v, yMin), yMax) - yMin) / (yMax - yMin)) * plotH;
 
   function onMove(e: React.MouseEvent<SVGRectElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -75,7 +76,7 @@ export function LineChart({
           {series.map((s) => (
             <g key={s.label}>
               {s.fill && (
-                <path d={`${linePath(s.data, x, y)}L${x(n - 1)},${y(0)}L${x(0)},${y(0)}Z`} fill={s.color} opacity={0.08} />
+                <path d={`${linePath(s.data, x, y)}L${x(n - 1)},${y(yMin)}L${x(0)},${y(yMin)}Z`} fill={s.color} opacity={0.08} />
               )}
               <path d={linePath(s.data, x, y)} fill="none" stroke={s.color} strokeWidth={1.5} strokeLinejoin="round" />
             </g>

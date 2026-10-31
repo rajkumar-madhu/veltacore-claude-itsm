@@ -211,3 +211,63 @@ class DeviceApiTests(TestCase):
         self.assertIn(self.onboard().status_code, (401, 403))
         self.assertIn(self.act("nse-srv-01", "force_off").status_code, (401, 403))
         self.assertEqual(self.client.get("/api/devices/").status_code, 200)
+
+
+class DomainHealthRuleTests(TestCase):
+    def test_thresholds(self):
+        from .domain_health import metric_status
+        self.assertEqual(metric_status("availability", 99.95), "ok")
+        self.assertEqual(metric_status("availability", 99.7), "warn")
+        self.assertEqual(metric_status("availability", 99.0), "crit")
+        self.assertEqual(metric_status("errorRate", 0.5), "ok")
+        self.assertEqual(metric_status("errorRate", 2.0), "crit")
+        self.assertEqual(metric_status("cpuPct", None), "unknown")
+
+    def test_saturation_alone_caps_at_warn(self):
+        from .domain_health import service_health
+        statuses = {"availability": "ok", "responseMs": "ok", "errorRate": "ok", "latencyP95Ms": "ok",
+                    "cpuPct": "crit", "memPct": "ok", "diskPct": "ok", "netPct": "ok"}
+        self.assertEqual(service_health(statuses), "warn")
+        self.assertEqual(service_health({**statuses, "errorRate": "crit"}), "crit")
+        self.assertEqual(service_health({k: "unknown" for k in statuses}), "unknown")
+
+
+@override_settings(DEBUG=True)
+class DomainApiTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_demo", stdout=open("/dev/null", "w"))
+
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_list_summarises_health(self):
+        rows = {d["id"]: d for d in self.client.get("/api/domains/").json()}
+        self.assertEqual(rows["trading"]["health"], "crit")
+        self.assertEqual(rows["security"]["health"], "ok")
+        self.assertEqual(rows["trading"]["availability"], 99.02)  # weakest service
+        self.assertIn("statuses", rows["trading"]["services"][0])
+
+    def test_detail_has_flow_health_and_incidents(self):
+        d = self.client.get("/api/domains/trading/").json()
+        flow = {n["label"]: n["health"] for n in d["flow"]}
+        self.assertEqual(flow["OMS"], "crit")
+        self.assertEqual(flow["Exchange"], "unknown")
+        self.assertEqual(d["incidents"][0]["id"], "INC000123")
+        self.assertEqual(self.client.get("/api/domains/nope/").status_code, 404)
+
+    def test_create_and_delete_empty_domain(self):
+        res = self.client.post("/api/domains/", {"name": "Payments", "description": "Cards & UPI"}, format="json")
+        self.assertEqual(res.status_code, 201, res.content)
+        self.assertEqual(res.json()["health"], "unknown")
+        self.assertEqual(self.client.post("/api/domains/", {"name": "payments"}, format="json").status_code, 400)
+        self.assertEqual(self.client.post("/api/domains/", {"name": "!!!"}, format="json").status_code, 400)
+        self.assertEqual(self.client.delete("/api/domains/payments/").status_code, 204)
+
+    def test_cannot_delete_domain_with_services(self):
+        self.assertEqual(self.client.delete("/api/domains/trading/").status_code, 400)
+
+    @override_settings(DEBUG=False)
+    def test_writes_need_auth_outside_debug(self):
+        self.assertIn(self.client.post("/api/domains/", {"name": "X"}, format="json").status_code, (401, 403))
+        self.assertEqual(self.client.get("/api/domains/").status_code, 200)
