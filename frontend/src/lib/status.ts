@@ -39,3 +39,6 @@ export const VM_STATE_PILL: Record<VmState, { cls: string; label: string; icon: 
   stopped: { cls: "crit", label: "Powered Off", icon: "fa-power-off" },
   suspended: { cls: "warn", label: "Suspended", icon: "fa-pause" },
 };
+
+/** "in_progress" → "In Progress" */
+export const stateLabel = (s: string) => s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());

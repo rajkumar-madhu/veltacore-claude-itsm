@@ -1,5 +1,6 @@
 import React from "react";
-import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { Layout } from "@/layout/Layout";
 import DashboardScreen from "@/screens/DashboardScreen";
 import SlosScreen from "@/screens/SlosScreen";
 import MonitorsScreen from "@/screens/MonitorsScreen";
@@ -12,80 +13,19 @@ import OnboardingScreen from "@/screens/onboarding/OnboardingScreen";
 import HeatmapScreen from "@/screens/heatmap/HeatmapScreen";
 import ExportersScreen from "@/screens/exporters/ExportersScreen";
 
-const NAV = [
-  { group: "Operate", items: [{ to: "/", label: "Dashboard", icon: "fa-gauge-high" }] },
-  {
-    group: "Observe",
-    items: [
-      { to: "/heatmap", label: "Heatmap & Domains", icon: "fa-table-cells" },
-      { to: "/slos", label: "SLOs", icon: "fa-bullseye" },
-      { to: "/monitors", label: "Monitors", icon: "fa-bell" },
-      { to: "/synthetics", label: "Synthetics", icon: "fa-globe" },
-      { to: "/exporters", label: "Exporters, Logs & Events", icon: "fa-gear" },
-    ],
-  },
-  {
-    group: "Infrastructure",
-    items: [
-      { to: "/devices?type=switch", label: "Switches", icon: "fa-network-wired" },
-      { to: "/devices?type=server", label: "Physical Servers", icon: "fa-server" },
-      { to: "/vms", label: "Virtual Machines", icon: "fa-cube" },
-      { to: "/devices", label: "All Devices", icon: "fa-layer-group" },
-    ],
-  },
-  { group: "Onboarding", items: [{ to: "/onboarding", label: "Add Device", icon: "fa-circle-plus" }] },
+const l = (f: () => Promise<{ default: React.ComponentType }>) => React.lazy(f);
+
+/** Lazily-loaded module screens, keyed by route path. */
+const LAZY: [string, React.LazyExoticComponent<React.ComponentType>][] = [
+  ["/tickets", l(() => import("@/screens/servicedesk/TicketsScreen"))],
+  ["/tickets/:id", l(() => import("@/screens/servicedesk/TicketDetailScreen"))],
+  ["/catalog", l(() => import("@/screens/servicedesk/CatalogScreen"))],
 ];
-
-function isActive(to: string, pathname: string, search: string) {
-  const [path, query] = to.split("?");
-  if (path === "/") return pathname === "/";
-  const type = new URLSearchParams(search).get("type");
-  if (query) return pathname === path && `type=${type}` === query;
-  if (path === "/devices") return (pathname === "/devices" && !type) || pathname.startsWith("/devices/");
-  return pathname.startsWith(path);
-}
-
-function Sidebar() {
-  const { pathname, search } = useLocation();
-  return (
-    <nav className="sidebar">
-      <div className="sidebar-brand">
-        <div className="logo">A</div>
-        <div>
-          <div className="name">Argus Monitoring</div>
-          <div className="sub">FINSPOT TECHNOLOGY</div>
-        </div>
-      </div>
-      {NAV.map((g) => (
-        <React.Fragment key={g.group}>
-          <div className="nav-group-label">{g.group}</div>
-          {g.items.map((item) => (
-            <Link key={item.to} to={item.to} className={`nav-link${isActive(item.to, pathname, search) ? " active" : ""}`}>
-              <i className={`fa-solid ${item.icon}`} />
-              {item.label}
-            </Link>
-          ))}
-        </React.Fragment>
-      ))}
-    </nav>
-  );
-}
-
-function Header() {
-  return (
-    <div className="header">
-      <span className="title">Fyers · Live Operations</span>
-      <span className="meta">Auto-refresh every 30s · Production · us-east-1</span>
-    </div>
-  );
-}
 
 export default function App() {
   return (
-    <div className="app">
-      <Sidebar />
-      <div className="main">
-        <Header />
+    <Layout>
+      <React.Suspense fallback={<div className="page"><div className="loading">Loading…</div></div>}>
         <Routes>
           <Route path="/" element={<DashboardScreen />} />
           <Route path="/slos" element={<SlosScreen />} />
@@ -98,9 +38,10 @@ export default function App() {
           <Route path="/onboarding" element={<OnboardingScreen />} />
           <Route path="/heatmap" element={<HeatmapScreen />} />
           <Route path="/exporters" element={<ExportersScreen />} />
+          {LAZY.map(([path, C]) => <Route key={path} path={path} element={<C />} />)}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </div>
-    </div>
+      </React.Suspense>
+    </Layout>
   );
 }

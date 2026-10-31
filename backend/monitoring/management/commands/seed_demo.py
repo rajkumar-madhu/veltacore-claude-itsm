@@ -1,3 +1,4 @@
+from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
 from monitoring.models import Exporter, Monitor, NetworkDevice, Site, Slo, SyntheticCheck, VirtualMachine
@@ -64,6 +65,7 @@ class Command(BaseCommand):
         domain_count = seed_domains()
         exporter_count = seed_exporters(sites)
 
+        call_command("seed_itsm", stdout=self.stdout)
         self.stdout.write(self.style.SUCCESS(
             f"Seeded {Site.objects.count()} sites, {Slo.objects.count()} SLOs, "
             f"{Monitor.objects.count()} monitors, {SyntheticCheck.objects.count()} synthetic checks, {vm_count} VMs, {device_count} devices, {domain_count} domains, {exporter_count} exporters."

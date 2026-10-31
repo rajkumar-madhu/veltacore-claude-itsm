@@ -269,6 +269,26 @@ def seed_devices(sites):
              events=[(timedelta(hours=7), "critical", "System", "Device unreachable (ICMP + SNMP)")]),
     ]
 
+    simple = lambda alerts=(): {"alerts": list(alerts), "logs": [], "vlans": [], "neighbors": []}
+    specs += [
+        dict(id="nse-rtr-01", hostname="NSE-RTR-01", device_type="router", vendor="Cisco", model="ISR 4451", serial="FDO2231A1BC",
+             ip="10.10.1.1", mgmt_ip="10.10.1.1", mac="00:1B:54:00:01:01", os_type="IOS-XE", os_version="17.6.4", site=mum,
+             location="DC-Rack-01", role="WAN Edge Router", contact="network@finspot.in", description="Primary WAN edge for NSE leased lines",
+             status="online", booted=timedelta(days=210), cpu=18.0, mem=41.0, temp=38, onboarded=timedelta(days=500),
+             details=simple([{"ts": "2025-09-26 11:02", "severity": "warning", "source": "Gi0/0/1", "message": "BGP flap with ISP-2 (3 in 1h)"}]),
+             events=[(timedelta(hours=2), "warning", "Gi0/0/1", "BGP neighbor 203.0.113.9 Down→Up")]),
+        dict(id="lb-01", hostname="LB-01", device_type="load_balancer", vendor="F5", model="BIG-IP i5800", serial="f5-xqtz-1122",
+             ip="10.10.1.80", mgmt_ip="10.10.1.81", mac="00:94:A1:00:80:01", os_type="TMOS", os_version="16.1.4", site=mum,
+             location="DC-Rack-01", role="Application Load Balancer", contact="network@finspot.in", description="Front door for OMS/Order Gateway",
+             status="online", booted=timedelta(days=96), cpu=27.0, mem=52.0, temp=35, onboarded=timedelta(days=480),
+             details=simple(), events=[(timedelta(days=1), "info", "System", "Pool oms-pool member 10.10.1.21:8443 up")]),
+        dict(id="wlc-01", hostname="WLC-01", device_type="wireless", vendor="Cisco", model="Catalyst 9800-40", serial="TTM2405Q0RS",
+             ip="10.10.2.5", mgmt_ip="10.10.2.5", mac="00:1B:54:02:05:01", os_type="IOS-XE", os_version="17.9.4", site=mum,
+             location="DC-Rack-03", role="Wireless LAN Controller", contact="network@finspot.in", description="Controller for 42 office APs",
+             status="online", booted=timedelta(days=61), cpu=11.0, mem=37.0, temp=33, onboarded=timedelta(days=300),
+             details=simple(), events=[(timedelta(hours=9), "info", "System", "AP-03 rejoined controller")]),
+    ]
+
     for spec in specs:
         booted, events, onboarded = spec.pop("booted"), spec.pop("events"), spec.pop("onboarded")
         cpu, mem, temp = spec.pop("cpu"), spec.pop("mem"), spec.pop("temp")
