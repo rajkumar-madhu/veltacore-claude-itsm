@@ -1,7 +1,11 @@
 from django.utils import timezone
 from rest_framework import serializers
 
-from .models import Datastore, Monitor, Site, Slo, Snapshot, SyntheticCheck, VirtualMachine, VmEvent
+import re
+
+from .models import (
+    Datastore, DeviceEvent, Monitor, NetworkDevice, Site, Slo, Snapshot, SyntheticCheck, VirtualMachine, VmEvent,
+)
 
 
 class DatastoreSerializer(serializers.ModelSerializer):
@@ -111,3 +115,99 @@ class SyntheticCheckSerializer(serializers.ModelSerializer):
     class Meta:
         model = SyntheticCheck
         fields = ["id", "name", "type", "target", "uptime", "p95", "status", "interval", "locations", "lastRun"]
+
+
+class DeviceEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DeviceEvent
+        fields = ["id", "ts", "severity", "source", "message"]
+
+
+def _uptime(device):
+    if device.status != "online" or device.booted_at is None:
+        return None
+    return int((timezone.now() - device.booted_at).total_seconds())
+
+
+class DeviceListSerializer(serializers.ModelSerializer):
+    deviceType = serializers.CharField(source="device_type")
+    siteId = serializers.CharField(source="site_id")
+    siteName = serializers.CharField(source="site.name")
+    lastSeen = serializers.DateTimeField(source="last_seen")
+    onboardedAt = serializers.DateTimeField(source="onboarded_at")
+    uptimeSeconds = serializers.SerializerMethodField()
+
+    class Meta:
+        model = NetworkDevice
+        fields = ["id", "hostname", "deviceType", "vendor", "model", "ip", "siteId", "siteName",
+                  "environment", "role", "status", "lastSeen", "onboardedAt", "uptimeSeconds"]
+
+    def get_uptimeSeconds(self, d):
+        return _uptime(d)
+
+
+class DeviceDetailSerializer(DeviceListSerializer):
+    mgmtIp = serializers.IPAddressField(source="mgmt_ip")
+    osType = serializers.CharField(source="os_type")
+    osVersion = serializers.CharField(source="os_version")
+    cpuPct = serializers.FloatField(source="cpu_pct")
+    memPct = serializers.FloatField(source="mem_pct")
+    tempC = serializers.FloatField(source="temp_c")
+    events = serializers.SerializerMethodField()
+
+    class Meta(DeviceListSerializer.Meta):
+        fields = DeviceListSerializer.Meta.fields + [
+            "serial", "mgmtIp", "mac", "osType", "osVersion", "location", "contact", "description",
+            "cpuPct", "memPct", "tempC", "details", "events",
+        ]
+
+    def get_events(self, d):
+        return DeviceEventSerializer(d.events.all()[:50], many=True).data
+
+
+HOSTNAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9.-]{0,62}")
+
+
+class DeviceOnboardSerializer(serializers.Serializer):
+    """Onboarding form / CSV row. camelCase in, model fields out."""
+    deviceType = serializers.ChoiceField(choices=[c for c, _ in NetworkDevice.TYPE_CHOICES])
+    hostname = serializers.CharField(max_length=64)
+    ip = serializers.IPAddressField()
+    mgmtIp = serializers.IPAddressField(required=False, allow_null=True, allow_blank=True)
+    site = serializers.SlugRelatedField(slug_field="id", queryset=Site.objects.all())
+    environment = serializers.ChoiceField(choices=[c for c, _ in NetworkDevice.ENV_CHOICES])
+    vendor = serializers.CharField(max_length=48, required=False, allow_blank=True, default="")
+    model = serializers.CharField(max_length=64, required=False, allow_blank=True, default="")
+    osType = serializers.CharField(max_length=32, required=False, allow_blank=True, default="")
+    osVersion = serializers.CharField(max_length=48, required=False, allow_blank=True, default="")
+    role = serializers.CharField(max_length=64, required=False, allow_blank=True, default="")
+    description = serializers.CharField(max_length=240, required=False, allow_blank=True, default="")
+
+    def validate_hostname(self, v):
+        v = v.strip().upper()
+        if not HOSTNAME_RE.fullmatch(v):
+            raise serializers.ValidationError("Use letters, digits, dots and hyphens (max 63).")
+        if NetworkDevice.objects.filter(pk=v.lower()).exists():
+            raise serializers.ValidationError(f"{v} is already onboarded.")
+        return v
+
+    def validate_ip(self, v):
+        if NetworkDevice.objects.filter(ip=v).exists():
+            raise serializers.ValidationError(f"{v} is already used by another device.")
+        return v
+
+    def create(self, d):
+        return NetworkDevice.objects.create(
+            id=d["hostname"].lower(), hostname=d["hostname"], device_type=d["deviceType"],
+            ip=d["ip"], mgmt_ip=d.get("mgmtIp") or None, site=d["site"], environment=d["environment"],
+            vendor=d["vendor"], model=d["model"], os_type=d["osType"], os_version=d["osVersion"],
+            role=d["role"], description=d["description"], status="unknown",
+            onboarded_at=timezone.now(), details={},
+        )
+
+
+class DeviceEditSerializer(serializers.Serializer):
+    role = serializers.CharField(max_length=64, allow_blank=True)
+    location = serializers.CharField(max_length=64, allow_blank=True)
+    contact = serializers.EmailField(allow_blank=True)
+    description = serializers.CharField(max_length=240, allow_blank=True)

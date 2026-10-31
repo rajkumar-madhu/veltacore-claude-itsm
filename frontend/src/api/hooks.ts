@@ -107,3 +107,93 @@ export function useVmAction(id: string) {
     onSettled: () => qc.invalidateQueries({ queryKey: ["vms"] }),
   });
 }
+
+// ---- Network devices (switches, firewalls, physical servers, …) ----
+export type DeviceType = "switch" | "router" | "firewall" | "load_balancer" | "server" | "database" | "storage" | "wireless";
+export type DeviceStatus = "online" | "offline" | "unknown";
+
+export interface DeviceRow {
+  id: string; hostname: string; deviceType: DeviceType; vendor: string; model: string; ip: string;
+  siteId: string; siteName: string; environment: string; role: string; status: DeviceStatus;
+  lastSeen: string | null; onboardedAt: string; uptimeSeconds: number | null;
+}
+
+export interface SwitchPort {
+  name: string; number: number; status: "up" | "down" | "disabled" | "unused"; speedMbps: number; duplex: string;
+  vlan: number; mode: string; inMbps: number; outMbps: number; inErrors: number; outErrors: number; discards: number;
+  description: string; mac: string;
+}
+export interface DeviceAlert { ts?: string; since?: string; severity: string; source: string; message?: string; title?: string }
+export interface DiscoveryResult {
+  ip: string; reachable: boolean; reverseDns: string | null; portsScanned: number; durationMs: number;
+  discoveredAt: string; method: string;
+  services: { service: string; port: number; status: string; latencyMs: number; version: string | null; description: string }[];
+}
+
+export interface DeviceDetails {
+  ports?: SwitchPort[];
+  vlans?: { id: number; name: string; status: string; ports: string; description: string }[];
+  neighbors?: { device: string; localPort: string; remotePort: string; platform: string; ip: string; protocol: string }[];
+  alerts?: DeviceAlert[];
+  stp?: { mode: string; instances: { vlan: number; rootBridge: string; rootPriority: number; isRoot: boolean; rootPort: string; topologyChanges: number }[] };
+  hardware?: { chassis: string; memoryMb: number; flashMb: number; cpu: string;
+    psus: { name: string; model: string; status: string; watts: number }[];
+    fans: { name: string; status: string; rpm: number }[];
+    sensors: { name: string; valueC: number; warnC: number }[] };
+  inventory?: { name: string; description: string; pid: string; serial: string }[];
+  runningConfig?: string;
+  logs?: VmLogLine[];
+  bmc?: { kind: "iDRAC" | "iLO"; version: string; ip: string; firmware: string; license: string; lifecycleController: string; connected: boolean; lastUpdated: string };
+  health?: { overall: string; components: { name: string; status: string; value: string }[] };
+  temps?: { sensor: string; current: number; warn: number }[];
+  fans?: { name: string; rpm: number; status: string }[];
+  psus?: { name: string; model: string; status: string; inputV: number; outputW: number; capacityW: number }[];
+  voltages?: { sensor: string; current: number; min: number; max: number }[];
+  hwEvents?: { ts: string; severity: string; sensor: string; message: string }[];
+  cpu?: { model: string; sockets: number; coresPerSocket: number; threads: number; baseGhz: number };
+  dimms?: { slot: string; sizeGb: number; type: string; status: string }[];
+  storage?: { controller: string;
+    virtualDisks: { name: string; raid: string; sizeTb: number; status: string }[];
+    physicalDisks: { slot: string; model: string; status: string; wearPct: number }[];
+    filesystems: { mount: string; fs: string; sizeGb: number; usedGb: number }[] };
+  nics?: { name: string; mac: string; ip: string; speedGbps: number; status: string; inMbps: number; outMbps: number }[];
+  processes?: VmProcess[];
+  services?: { name: string; port: number; status: string; description: string }[];
+  config?: Record<string, string>;
+  lastDiscovery?: DiscoveryResult;
+}
+
+export interface DeviceDetail extends DeviceRow {
+  serial: string; mgmtIp: string | null; mac: string; osType: string; osVersion: string; location: string;
+  contact: string; description: string; cpuPct: number | null; memPct: number | null; tempC: number | null;
+  details: DeviceDetails;
+  events: { id: number; ts: string; severity: string; source: string; message: string }[];
+}
+
+export function useDevices(params: { type?: string; sort?: "recent" } = {}) {
+  const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v) as [string, string][]).toString();
+  return useQuery({ ...quiet, queryKey: ["devices", qs], queryFn: () => apiGet<DeviceRow[]>(`/devices/${qs ? `?${qs}` : ""}`) });
+}
+
+export function useDevice(id: string) {
+  return useQuery({ ...quiet, queryKey: ["devices", "detail", id], queryFn: () => apiGet<DeviceDetail>(`/devices/${id}/`) });
+}
+
+export async function apiPost<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`/api${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(typeof data.detail === "string" ? data.detail : `Request failed (${res.status})`) as Error & { fields?: Record<string, string[]> };
+    if (!data.detail) err.fields = data;
+    throw err;
+  }
+  return data as T;
+}
+
+export function useDeviceAction(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { action: string } & Record<string, unknown>) => apiPost<{ detail: string }>(`/devices/${id}/action/`, body).then((r) => r.detail),
+    onSettled: () => qc.invalidateQueries({ queryKey: ["devices"] }),
+  });
+}

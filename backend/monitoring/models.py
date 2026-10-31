@@ -171,3 +171,60 @@ class SyntheticCheck(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class NetworkDevice(models.Model):
+    """Any onboarded infrastructure device: switches, routers, firewalls,
+    physical servers, etc. Type-specific inventory (switch ports, VLANs,
+    server BMC sensors, …) lives in `details`."""
+    TYPE_CHOICES = [
+        ("switch", "Switch"), ("router", "Router"), ("firewall", "Firewall"),
+        ("load_balancer", "Load Balancer"), ("server", "Physical Server"),
+        ("database", "Database"), ("storage", "Storage"), ("wireless", "Wireless"),
+    ]
+    STATUS_CHOICES = [("online", "Online"), ("offline", "Offline"), ("unknown", "Unknown")]
+    ENV_CHOICES = [("Production", "Production"), ("UAT", "UAT"), ("DR", "DR"), ("Development", "Development")]
+
+    id = models.SlugField(primary_key=True, max_length=64)
+    hostname = models.CharField(max_length=64, unique=True)
+    device_type = models.CharField(max_length=16, choices=TYPE_CHOICES)
+    vendor = models.CharField(max_length=48, blank=True, default="")
+    model = models.CharField(max_length=64, blank=True, default="")
+    serial = models.CharField(max_length=48, blank=True, default="")
+    ip = models.GenericIPAddressField()
+    mgmt_ip = models.GenericIPAddressField(null=True, blank=True)
+    mac = models.CharField(max_length=17, blank=True, default="")
+    os_type = models.CharField(max_length=32, blank=True, default="")
+    os_version = models.CharField(max_length=48, blank=True, default="")
+    site = models.ForeignKey(Site, on_delete=models.PROTECT, related_name="network_devices")
+    location = models.CharField(max_length=64, blank=True, default="")
+    environment = models.CharField(max_length=16, choices=ENV_CHOICES, default="Production")
+    role = models.CharField(max_length=64, blank=True, default="")
+    contact = models.EmailField(blank=True, default="")
+    description = models.CharField(max_length=240, blank=True, default="")
+    status = models.CharField(max_length=8, choices=STATUS_CHOICES, default="unknown")
+    last_seen = models.DateTimeField(null=True, blank=True)
+    booted_at = models.DateTimeField(null=True, blank=True)
+    onboarded_at = models.DateTimeField()
+    cpu_pct = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(100)])
+    mem_pct = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(100)])
+    temp_c = models.FloatField(null=True, blank=True)
+    details = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["hostname"]
+
+    def __str__(self):
+        return self.hostname
+
+
+class DeviceEvent(models.Model):
+    SEVERITY_CHOICES = [("info", "Info"), ("warning", "Warning"), ("critical", "Critical")]
+    device = models.ForeignKey(NetworkDevice, on_delete=models.CASCADE, related_name="events")
+    ts = models.DateTimeField()
+    severity = models.CharField(max_length=8, choices=SEVERITY_CHOICES, default="info")
+    source = models.CharField(max_length=48, blank=True, default="")    # interface / sensor / "System"
+    message = models.CharField(max_length=240)
+
+    class Meta:
+        ordering = ["-ts", "-id"]

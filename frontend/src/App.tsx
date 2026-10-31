@@ -6,6 +6,8 @@ import MonitorsScreen from "@/screens/MonitorsScreen";
 import SyntheticsScreen from "@/screens/SyntheticsScreen";
 import VmListScreen from "@/screens/VmListScreen";
 import VmDetailScreen from "@/screens/vm/VmDetailScreen";
+import DeviceListScreen from "@/screens/device/DeviceListScreen";
+import DeviceDetailScreen from "@/screens/device/DeviceDetailScreen";
 
 const NAV = [
   { group: "Operate", items: [{ to: "/", label: "Dashboard", icon: "fa-gauge-high" }] },
@@ -17,11 +19,28 @@ const NAV = [
       { to: "/synthetics", label: "Synthetics", icon: "fa-globe" },
     ],
   },
-  { group: "Infrastructure", items: [{ to: "/vms", label: "Virtual Machines", icon: "fa-cube" }] },
+  {
+    group: "Infrastructure",
+    items: [
+      { to: "/devices?type=switch", label: "Switches", icon: "fa-network-wired" },
+      { to: "/devices?type=server", label: "Physical Servers", icon: "fa-server" },
+      { to: "/vms", label: "Virtual Machines", icon: "fa-cube" },
+      { to: "/devices", label: "All Devices", icon: "fa-layer-group" },
+    ],
+  },
 ];
 
+function isActive(to: string, pathname: string, search: string) {
+  const [path, query] = to.split("?");
+  if (path === "/") return pathname === "/";
+  const type = new URLSearchParams(search).get("type");
+  if (query) return pathname === path && `type=${type}` === query;
+  if (path === "/devices") return (pathname === "/devices" && !type) || pathname.startsWith("/devices/");
+  return pathname.startsWith(path);
+}
+
 function Sidebar() {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   return (
     <nav className="sidebar">
       <div className="sidebar-brand">
@@ -35,7 +54,7 @@ function Sidebar() {
         <React.Fragment key={g.group}>
           <div className="nav-group-label">{g.group}</div>
           {g.items.map((item) => (
-            <Link key={item.to} to={item.to} className={`nav-link${(item.to === "/" ? pathname === "/" : pathname.startsWith(item.to)) ? " active" : ""}`}>
+            <Link key={item.to} to={item.to} className={`nav-link${isActive(item.to, pathname, search) ? " active" : ""}`}>
               <i className={`fa-solid ${item.icon}`} />
               {item.label}
             </Link>
@@ -68,6 +87,8 @@ export default function App() {
           <Route path="/synthetics" element={<SyntheticsScreen />} />
           <Route path="/vms" element={<VmListScreen />} />
           <Route path="/vms/:id" element={<VmDetailScreen />} />
+          <Route path="/devices" element={<DeviceListScreen />} />
+          <Route path="/devices/:id" element={<DeviceDetailScreen />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
