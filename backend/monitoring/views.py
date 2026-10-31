@@ -350,8 +350,10 @@ class LogViewSet(viewsets.ViewSet):
             qs = qs.filter(exporter_id=p["exporter"])
         if p.get("level"):
             qs = qs.filter(level=p["level"].upper())
+        if p.get("q"):
+            qs = qs.filter(Q(message__icontains=p["q"]) | Q(exporter__name__icontains=p["q"]))
         try:
-            limit = max(1, min(200, int(p.get("limit", 50))))
+            limit = max(1, min(500, int(p.get("limit", 50))))
         except ValueError:
             limit = 50
         return Response([{"id": l.id, "ts": l.ts, "exporter": l.exporter.name, "exporterId": l.exporter_id,

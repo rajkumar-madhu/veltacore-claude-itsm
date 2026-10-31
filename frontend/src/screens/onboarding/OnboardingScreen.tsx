@@ -28,7 +28,7 @@ export default function OnboardingScreen() {
   const [toast, setToast] = useToast();
 
   const [step, setStep] = React.useState(0);
-  const [f, setF] = React.useState<FormState>(EMPTY);
+  const [f, setF] = React.useState<FormState>(() => ({ ...EMPTY, ip: new URLSearchParams(window.location.search).get("ip") ?? "" }));
   const [errors, setErrors] = React.useState<Errors>({});
   const [discovery, setDiscovery] = React.useState<DiscoveryResult | null>(null);
   const [cmdb, setCmdb] = React.useState<Cmdb>({ ciClass: CI_CLASS.server, businessService: "", criticality: "P2 - High", supportGroup: "" });

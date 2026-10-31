@@ -45,12 +45,12 @@ export default function HeatmapScreen() {
   const del = useDeleteDomain();
   const now = useClock();
   const [toast, setToast] = useToast();
-  const [domainFilter, setDomainFilter] = React.useState("");
+  const [domainFilter, setDomainFilter] = React.useState(() => new URLSearchParams(window.location.search).get("domain") ?? "");
   const [serviceFilter, setServiceFilter] = React.useState("");
   const [hostFilter, setHostFilter] = React.useState("");
   const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({});
   const [asList, setAsList] = React.useState(false);
-  const [selected, setSelected] = React.useState<string>();
+  const [selected, setSelected] = React.useState<string | undefined>(() => new URLSearchParams(window.location.search).get("domain") ?? undefined);
   const [detailTab, setDetailTab] = React.useState<DomainTab>("overview");
   const [adding, setAdding] = React.useState(false);
   const [menuFor, setMenuFor] = React.useState<string>();
