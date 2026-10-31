@@ -65,8 +65,8 @@ export function Breadcrumbs({ items }: { items: { label: string; to?: string }[]
   );
 }
 
-export function Modal({ title, onClose, children, footer }: {
-  title: string; onClose: () => void; children: React.ReactNode; footer: React.ReactNode;
+export function Modal({ title, onClose, children, footer, wide }: {
+  title: string; onClose: () => void; children: React.ReactNode; footer: React.ReactNode; wide?: boolean;
 }) {
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -75,7 +75,7 @@ export function Modal({ title, onClose, children, footer }: {
   }, [onClose]);
   return (
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal" role="dialog" aria-label={title}>
+      <div className={`modal${wide ? " wide" : ""}`} role="dialog" aria-label={title}>
         <div className="modal-head">
           <span>{title}</span>
           <button className="icon-btn" onClick={onClose} aria-label="Close"><i className="fa-solid fa-xmark" /></button>
