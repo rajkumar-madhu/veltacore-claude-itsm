@@ -40,6 +40,11 @@ const LAZY: [string, React.LazyExoticComponent<React.ComponentType>][] = [
   ["/automation/workflows", l(() => import("@/screens/automation/WorkflowsScreen"))],
   ["/automation/executions", l(() => import("@/screens/automation/ExecutionsScreen"))],
   ["/automation/stackstorm", l(() => import("@/screens/automation/StackStormScreen"))],
+  ["/analytics", l(() => import("@/screens/analytics/AnalyticsScreen"))],
+  ["/reports", l(() => import("@/screens/analytics/ReportsScreen"))],
+  ["/reports/rca", l(() => import("@/screens/analytics/RcaListScreen"))],
+  ["/reports/rca/:id", l(() => import("@/screens/analytics/RcaDetailScreen"))],
+  ["/audit", l(() => import("@/screens/analytics/AuditScreen"))],
 ];
 
 export default function App() {

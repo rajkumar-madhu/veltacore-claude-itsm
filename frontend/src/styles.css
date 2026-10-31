@@ -668,3 +668,7 @@ a.btn { text-decoration: none; }
 .modal-body { max-height: calc(100vh - 160px); overflow-y: auto; }
 .field-row > .field { min-width: 0; }
 .field input, .field select, .field textarea { min-width: 0; }
+.chart-tip { position: absolute; top: 28px; transform: translateX(-50%); background: white; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 6px 18px rgba(15,28,63,.12); padding: 8px 10px; font-size: 12px; pointer-events: none; min-width: 140px; z-index: 2; }
+.chart-tip > div { display: flex; align-items: center; gap: 6px; margin-top: 3px; color: #475569; }
+.chart-tip > div span { margin-left: auto; font-weight: 700; color: var(--ink); }
+.chart-tip i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }

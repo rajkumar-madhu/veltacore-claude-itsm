@@ -81,7 +81,10 @@ export function isActive(to: string, pathname: string, search: string) {
   }
   if (path === "/") return pathname === "/";
   // list pages own their detail pages, but not sibling sub-pages that have their own nav entry
-  const sameOrDetail = pathname === path || (pathname.startsWith(`${path}/`) && !ALL_PATHS.has(pathname));
+  const owns = (p: string) => pathname === p || pathname.startsWith(`${p}/`);
+  // a deeper nav entry (e.g. /reports/rca) owns its own detail pages, so /reports must not light up too
+  const deeper = [...ALL_PATHS].some((p) => p.length > path.length && p.startsWith(`${path}/`) && owns(p));
+  const sameOrDetail = pathname === path || (pathname.startsWith(`${path}/`) && !ALL_PATHS.has(pathname) && !deeper);
   const filtered = ["type", "platform", "kind"].some((k) => params.get(k));
   return sameOrDetail && !(pathname === path && filtered);
 }
