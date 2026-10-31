@@ -28,6 +28,11 @@ const LAZY: [string, React.LazyExoticComponent<React.ComponentType>][] = [
   ["/assets/software", l(() => import("@/screens/assets/SoftwareScreen"))],
   ["/assets/licenses", l(() => import("@/screens/assets/LicensesScreen"))],
   ["/assets/lifecycle", l(() => import("@/screens/assets/LifecycleScreen"))],
+  ["/alerts", l(() => import("@/screens/monitoring/AlertsScreen"))],
+  ["/uptime", l(() => import("@/screens/monitoring/UptimeScreen"))],
+  ["/monitoring/nagios", l(() => import("@/screens/monitoring/NagiosScreen"))],
+  ["/monitoring/prometheus", l(() => import("@/screens/monitoring/PrometheusScreen"))],
+  ["/monitoring/templates", l(() => import("@/screens/monitoring/TemplatesScreen"))],
 ];
 
 export default function App() {
