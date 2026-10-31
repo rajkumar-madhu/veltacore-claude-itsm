@@ -129,6 +129,18 @@ class DeviceApiTests(TestCase):
         self.assertEqual(res.json()["hostname"], "NSE-APP-09")
         self.assertEqual(res.json()["status"], "unknown")
 
+    def test_onboard_stores_cmdb_and_monitoring(self):
+        res = self.onboard(
+            cmdb={"ciClass": "Server", "businessService": "NSE Trading", "criticality": "P1 - Critical", "supportGroup": "Infra"},
+            monitoring={"checks": ["ICMP ping", "SSH/22"], "intervalSec": 60, "alertProfile": "Trading critical"},
+        )
+        self.assertEqual(res.status_code, 201, res.content)
+        details = NetworkDevice.objects.get(pk="nse-app-09").details
+        self.assertEqual(details["cmdb"]["criticality"], "P1 - Critical")
+        self.assertEqual(details["monitoring"]["checks"], ["ICMP ping", "SSH/22"])
+        bad = self.onboard(hostname="NSE-APP-10", ip="10.10.1.100", monitoring={"checks": [], "intervalSec": 7, "alertProfile": "Default"})
+        self.assertIn("monitoring", bad.json())
+
     def test_onboard_rejects_duplicates_and_bad_input(self):
         self.assertIn("hostname", self.onboard(hostname="NCE-SW-01").json())
         self.assertIn("ip", self.onboard(ip="10.10.1.50").json())

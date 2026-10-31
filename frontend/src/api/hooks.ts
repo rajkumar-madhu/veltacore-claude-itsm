@@ -197,3 +197,31 @@ export function useDeviceAction(id: string) {
     onSettled: () => qc.invalidateQueries({ queryKey: ["devices"] }),
   });
 }
+
+export interface OnboardBody {
+  deviceType: DeviceType; hostname: string; ip: string; mgmtIp?: string; site: string; environment: string;
+  vendor: string; model: string; osType: string; osVersion: string; role: string; description: string;
+  cmdb?: { ciClass: string; businessService: string; criticality: string; supportGroup: string };
+  monitoring?: { checks: string[]; intervalSec: number; alertProfile: string };
+}
+
+export function useOnboard() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: OnboardBody) => apiPost<DeviceDetail>("/devices/", body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["devices"] }),
+  });
+}
+
+export function useBulkImport() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (rows: Record<string, string>[]) =>
+      apiPost<{ created: string[]; errors: { row: number; errors: Record<string, string[]> }[] }>("/devices/bulk/", { rows }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["devices"] }),
+  });
+}
+
+export function useDiscover() {
+  return useMutation({ mutationFn: (ip: string) => apiPost<DiscoveryResult>("/devices/discover/", { ip }) });
+}

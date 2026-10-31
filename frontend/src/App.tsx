@@ -8,6 +8,7 @@ import VmListScreen from "@/screens/VmListScreen";
 import VmDetailScreen from "@/screens/vm/VmDetailScreen";
 import DeviceListScreen from "@/screens/device/DeviceListScreen";
 import DeviceDetailScreen from "@/screens/device/DeviceDetailScreen";
+import OnboardingScreen from "@/screens/onboarding/OnboardingScreen";
 
 const NAV = [
   { group: "Operate", items: [{ to: "/", label: "Dashboard", icon: "fa-gauge-high" }] },
@@ -28,6 +29,7 @@ const NAV = [
       { to: "/devices", label: "All Devices", icon: "fa-layer-group" },
     ],
   },
+  { group: "Onboarding", items: [{ to: "/onboarding", label: "Add Device", icon: "fa-circle-plus" }] },
 ];
 
 function isActive(to: string, pathname: string, search: string) {
@@ -89,6 +91,7 @@ export default function App() {
           <Route path="/vms/:id" element={<VmDetailScreen />} />
           <Route path="/devices" element={<DeviceListScreen />} />
           <Route path="/devices/:id" element={<DeviceDetailScreen />} />
+          <Route path="/onboarding" element={<OnboardingScreen />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

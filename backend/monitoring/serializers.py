@@ -168,6 +168,19 @@ class DeviceDetailSerializer(DeviceListSerializer):
 HOSTNAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9.-]{0,62}")
 
 
+class CmdbClassificationSerializer(serializers.Serializer):
+    ciClass = serializers.CharField(max_length=48)
+    businessService = serializers.CharField(max_length=64, allow_blank=True, default="")
+    criticality = serializers.ChoiceField(choices=["P1 - Critical", "P2 - High", "P3 - Medium", "P4 - Low"])
+    supportGroup = serializers.CharField(max_length=64, allow_blank=True, default="")
+
+
+class MonitoringSetupSerializer(serializers.Serializer):
+    checks = serializers.ListField(child=serializers.CharField(max_length=48), max_length=40, allow_empty=True)
+    intervalSec = serializers.ChoiceField(choices=[30, 60, 300, 900])
+    alertProfile = serializers.ChoiceField(choices=["Default", "Trading critical", "Business hours", "Silent (no paging)"])
+
+
 class DeviceOnboardSerializer(serializers.Serializer):
     """Onboarding form / CSV row. camelCase in, model fields out."""
     deviceType = serializers.ChoiceField(choices=[c for c, _ in NetworkDevice.TYPE_CHOICES])
@@ -182,6 +195,8 @@ class DeviceOnboardSerializer(serializers.Serializer):
     osVersion = serializers.CharField(max_length=48, required=False, allow_blank=True, default="")
     role = serializers.CharField(max_length=64, required=False, allow_blank=True, default="")
     description = serializers.CharField(max_length=240, required=False, allow_blank=True, default="")
+    cmdb = CmdbClassificationSerializer(required=False)
+    monitoring = MonitoringSetupSerializer(required=False)
 
     def validate_hostname(self, v):
         v = v.strip().upper()
@@ -202,7 +217,8 @@ class DeviceOnboardSerializer(serializers.Serializer):
             ip=d["ip"], mgmt_ip=d.get("mgmtIp") or None, site=d["site"], environment=d["environment"],
             vendor=d["vendor"], model=d["model"], os_type=d["osType"], os_version=d["osVersion"],
             role=d["role"], description=d["description"], status="unknown",
-            onboarded_at=timezone.now(), details={},
+            onboarded_at=timezone.now(),
+            details={k: dict(d[k]) for k in ("cmdb", "monitoring") if k in d},
         )
 
 
